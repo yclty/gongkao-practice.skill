@@ -14,6 +14,20 @@
 - 仿题生成与参考题学习的底层资料库
 
 
+
+## 开箱即用
+
+如果你的目标不是开发题库，而是直接作为个人备考系统使用：
+
+1. 每个学习者新建一个独立 ChatGPT Project。
+2. 将 [PROJECT_INSTRUCTIONS.md](PROJECT_INSTRUCTIONS.md) 复制到 Project 指令。
+3. 将 [BOOTSTRAP_PROMPT.md](BOOTSTRAP_PROMPT.md) 作为第一次初始化消息发送。
+4. 初始化完成后，日常直接说“开始今天训练”。
+
+完整说明见 [QUICKSTART.md](QUICKSTART.md)。
+
+> 不要让多个学习者长期共用同一个 Project；公共 Skill 可以共享，个人学习状态必须隔离。
+
 ## 本 Fork 的运行架构
 
 本 Fork 将“可复用能力”和“个人学习状态”彻底分离：
