@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>考公刷题</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #ffffff;
+      --panel: #f7f7f8;
+      --text: #171717;
+      --muted: #6b6b6b;
+      --line: #dedede;
+      --accent: #171717;
+      --accentText: #ffffff;
+      --good: #147a42;
+      --bad: #b42318;
+      --softGood: #eaf7ef;
+      --softBad: #fff0ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1f1f1f;
+        --panel: #292929;
+        --text: #f3f3f3;
+        --muted: #b0b0b0;
+        --line: #404040;
+        --accent: #f3f3f3;
+        --accentText: #171717;
+        --good: #65d494;
+        --bad: #ff8f82;
+        --softGood: #193427;
+        --softBad: #3b211f;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .meta {
+      min-width: 0;
+    }
+    .module {
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .subtype {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .rightMeta {
+      text-align: right;
+      flex: none;
+    }
+    .progress {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .timer {
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      font-weight: 650;
+      margin-top: 2px;
+    }
+    .source {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .material {
+      white-space: pre-wrap;
+      line-height: 1.65;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+    .stem {
+      white-space: pre-wrap;
+      line-height: 1.65;
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .options {
+      display: grid;
+      gap: 10px;
+    }
+    .option {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      align-items: start;
+      gap: 8px;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .option:hover:not(:disabled) {
+      background: var(--panel);
+    }
+    .option:disabled {
+      cursor: default;
+      opacity: .75;
+    }
+    .letter {
+      height: 26px;
+      width: 26px;
+      border-radius: 8px;
+      background: var(--panel);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .feedback {
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .feedback.good { background: var(--softGood); }
+    .feedback.bad { background: var(--softBad); }
+    .feedbackTitle {
+      font-weight: 750;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+    .feedbackMeta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .method {
+      margin-top: 12px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    details {
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    summary {
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .explanation {
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .errorBlock {
+      margin-top: 14px;
+    }
+    .errorTitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 9px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .chip.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accentText);
+    }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    .primary {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--accentText);
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary:disabled { opacity: .5; cursor: default; }
+    .summaryCard {
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .summaryTitle {
+      font-size: 20px;
+      font-weight: 760;
+      margin-bottom: 16px;
+    }
+    .score {
+      font-size: 34px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .summaryGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .metric {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .metricValue {
+      font-size: 18px;
+      font-weight: 750;
+    }
+    .metricLabel {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 8px;
+    }
+    .errorBox {
+      background: var(--softBad);
+      color: var(--bad);
+      border-radius: 12px;
+      padding: 12px;
+      line-height: 1.5;
+    }
+    @media (max-width: 520px) {
+      main { padding: 14px; }
+      .stem { font-size: 16px; }
+      .summaryGrid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main id="app"><div class="empty">正在加载题目…</div></main>
+<script type="module">
+  const app = document.getElementById("app");
+  let state = null;
+  let rpcId = 0;
+  let busy = false;
+  let timer = null;
+  let questionStart = 0;
+  let activeQuestionId = null;
+  const pending = new Map();
+
+  const ERROR_LABELS = {
+    K: "知识不会",
+    M: "方法不会",
+    U: "理解错误",
+    R: "审题错误",
+    C: "计算错误",
+    D: "干扰项",
+    T: "时间不足",
+    G: "蒙题",
+    S: "速度不足",
+  };
+
+  const sourceLabel = (source) => ({
+    real: "真题",
+    ai_variant: "AI 变式题",
+    practice: "练习题",
+  }[source] ?? "练习题");
+
+  const formatSeconds = (seconds) => {
+    const value = Math.max(0, Number(seconds) || 0);
+    const m = Math.floor(value / 60);
+    const s = Math.floor(value % 60);
+    return m ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+  };
+
+  const rpcNotify = (method, params) => {
+    window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+  };
+
+  const rpcRequest = (method, params) =>
+    new Promise((resolve, reject) => {
+      const id = ++rpcId;
+      pending.set(id, { resolve, reject });
+      window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+    });
+
+  const callTool = async (name, payload) => {
+    await bridgeReady;
+    const response = await rpcRequest("tools/call", {
+      name,
+      arguments: payload,
+    });
+    updateFromResponse(response);
+    return response;
+  };
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const message = event.data;
+    if (!message || message.jsonrpc !== "2.0") return;
+
+    if (typeof message.id === "number") {
+      const request = pending.get(message.id);
+      if (!request) return;
+      pending.delete(message.id);
+      if (message.error) request.reject(message.error);
+      else request.resolve(message.result);
+      return;
+    }
+
+    if (message.method === "ui/notifications/tool-result") {
+      updateFromResponse(message.params);
+    }
+  }, { passive: true });
+
+  const initializeBridge = async () => {
+    await rpcRequest("ui/initialize", {
+      appInfo: { name: "gongkao-quiz-widget", version: "0.4.0" },
+      appCapabilities: {},
+      protocolVersion: "2026-01-26",
+    });
+    rpcNotify("ui/notifications/initialized", {});
+  };
+
+  const bridgeReady = initializeBridge().catch((error) => {
+    console.error("MCP Apps bridge init failed", error);
+    app.innerHTML = '<div class="errorBox">答题组件初始化失败，请使用文字模式继续训练。</div>';
+    throw error;
+  });
+
+  function clearTimer() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+
+  function startTimer(questionId) {
+    clearTimer();
+    activeQuestionId = questionId;
+    questionStart = performance.now();
+    const el = document.getElementById("timer");
+    if (!el) return;
+    const tick = () => {
+      const seconds = Math.floor((performance.now() - questionStart) / 1000);
+      el.textContent = formatSeconds(seconds);
+    };
+    tick();
+    timer = setInterval(tick, 250);
+  }
+
+  function elapsedSeconds() {
+    return Math.max(0, Math.round((performance.now() - questionStart) / 1000));
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function renderTopbar(question, showTimer) {
+    const top = el("div", "topbar");
+    const left = el("div", "meta");
+    left.append(
+      el("div", "module", question.module),
+      el("div", "subtype", question.subtype || "综合训练")
+    );
+
+    const right = el("div", "rightMeta");
+    right.append(
+      el("div", "progress", `${question.progress.current} / ${question.progress.total}`)
+    );
+    if (showTimer) {
+      const timerEl = el("div", "timer", "0s");
+      timerEl.id = "timer";
+      right.append(timerEl);
+    }
+    top.append(left, right);
+    return top;
+  }
+
+  function renderQuestion(payload) {
+    const question = payload.question;
+    app.replaceChildren();
+    app.append(renderTopbar(question, true));
+
+    const badge = el("div", "source", sourceLabel(question.source_type));
+    app.append(badge);
+
+    if (question.material) {
+      app.append(el("div", "material", question.material));
+    }
+    app.append(el("div", "stem", question.stem));
+
+    const options = el("div", "options");
+    for (const option of question.options) {
+      const button = el("button", "option");
+      button.type = "button";
+      button.dataset.answer = option.label;
+      button.append(
+        el("span", "letter", option.label),
+        el("span", "", option.text)
+      );
+      button.addEventListener("click", () => submitAnswer(option.label));
+      options.append(button);
+    }
+    app.append(options);
+
+    requestAnimationFrame(() => startTimer(question.question_id));
+  }
+
+  async function submitAnswer(answer) {
+    if (busy || !state || state.view !== "question") return;
+    const question = state.payload.question;
+    if (activeQuestionId !== question.question_id) return;
+    busy = true;
+    document.querySelectorAll(".option").forEach((button) => { button.disabled = true; });
+    try {
+      await callTool("submit_quiz_answer", {
+        session_id: state.session_id,
+        question_id: question.question_id,
+        answer,
+        elapsed_seconds: elapsedSeconds(),
+      });
+    } catch (error) {
+      console.error(error);
+      document.querySelectorAll(".option").forEach((button) => { button.disabled = false; });
+    } finally {
+      busy = false;
+    }
+  }
+
+  function renderFeedback(payload) {
+    clearTimer();
+    const question = payload.question;
+    const result = payload.result;
+    app.replaceChildren();
+    app.append(renderTopbar(question, false));
+
+    const box = el("div", `feedback ${result.correct ? "good" : "bad"}`);
+    box.append(el(
+      "div",
+      "feedbackTitle",
+      result.correct ? "回答正确" : `选择 ${result.answer} · 正确答案 ${result.correct_answer}`
+    ));
+
+    const targetText = question.target_seconds
+      ? ` · 目标 ≤ ${question.target_seconds}s`
+      : "";
+    box.append(el(
+      "div",
+      "feedbackMeta",
+      `用时 ${formatSeconds(result.elapsed_seconds)}${targetText}`
+    ));
+
+    if (result.fastest_method) {
+      const method = el("div", "method");
+      method.append(el("strong", "", "最快思路："), document.createTextNode(result.fastest_method));
+      box.append(method);
+    } else if (result.explanation_short) {
+      box.append(el("div", "method", result.explanation_short));
+    }
+
+    if (result.explanation_full) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "查看完整解析";
+      details.append(summary, el("div", "explanation", result.explanation_full));
+      box.append(details);
+    }
+    app.append(box);
+
+    if (!result.correct) {
+      const errorBlock = el("div", "errorBlock");
+      errorBlock.append(el("div", "errorTitle", "这题主要为什么错？可选，点一下即可修正画像"));
+      const chips = el("div", "chips");
+      for (const code of payload.error_codes || []) {
+        const chip = el("button", `chip${result.error_code === code ? " selected" : ""}`, `${code} ${ERROR_LABELS[code] || code}`);
+        chip.type = "button";
+        chip.addEventListener("click", () => setErrorCode(code));
+        chips.append(chip);
+      }
+      errorBlock.append(chips);
+      app.append(errorBlock);
+    } else if (result.error_code === "S") {
+      const errorBlock = el("div", "errorBlock");
+      errorBlock.append(el("div", "errorTitle", "答案正确，但本题已标记为速度不足（S）"));
+      app.append(errorBlock);
+    }
+
+    const actions = el("div", "actions");
+    const next = el("button", "primary", question.progress.current === question.progress.total ? "查看结果" : "下一题");
+    next.type = "button";
+    next.addEventListener("click", nextQuestion);
+    actions.append(next);
+    app.append(actions);
+  }
+
+  async function setErrorCode(code) {
+    if (busy || !state || state.view !== "feedback") return;
+    busy = true;
+    try {
+      await callTool("set_quiz_error_code", {
+        session_id: state.session_id,
+        question_id: state.payload.question.question_id,
+        error_code: code,
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function nextQuestion() {
+    if (busy || !state) return;
+    busy = true;
+    const button = document.querySelector(".primary");
+    if (button) button.disabled = true;
+    try {
+      await callTool("next_quiz_question", { session_id: state.session_id });
+    } catch (error) {
+      console.error(error);
+      if (button) button.disabled = false;
+    } finally {
+      busy = false;
+    }
+  }
+
+  function renderSummary(payload) {
+    clearTimer();
+    app.replaceChildren();
+    const stats = payload.stats;
+    const card = el("div", "summaryCard");
+    card.append(el("div", "summaryTitle", "本轮训练完成"));
+    card.append(el("div", "score", `${Math.round((stats.accuracy || 0) * 100)}%`));
+
+    const grid = el("div", "summaryGrid");
+    const values = [
+      [`${stats.correct} / ${stats.answered}`, "正确"],
+      [formatSeconds(stats.active_seconds), "有效用时"],
+      [String(Object.values(stats.error_counts || {}).reduce((a, b) => a + b, 0)), "需复盘"],
+    ];
+    for (const [value, label] of values) {
+      const metric = el("div", "metric");
+      metric.append(el("div", "metricValue", value), el("div", "metricLabel", label));
+      grid.append(metric);
+    }
+    card.append(grid);
+
+    const errors = Object.entries(stats.error_counts || {});
+    if (errors.length) {
+      const block = el("div", "errorBlock");
+      block.append(el("div", "errorTitle", "本轮错因"));
+      const chips = el("div", "chips");
+      errors.sort((a, b) => b[1] - a[1]).forEach(([code, count]) => {
+        chips.append(el("span", "chip selected", `${code} ${ERROR_LABELS[code] || code} × ${count}`));
+      });
+      block.append(chips);
+      card.append(block);
+    }
+
+    app.append(card);
+  }
+
+  function renderError(payload) {
+    clearTimer();
+    app.replaceChildren(el("div", "errorBox", payload.message || "答题会话出现问题，请在聊天中继续。"));
+  }
+
+  function render() {
+    if (!state) return;
+    if (state.view === "question") renderQuestion(state.payload);
+    else if (state.view === "feedback") renderFeedback(state.payload);
+    else if (state.view === "summary") renderSummary(state.payload);
+    else renderError(state.payload || {});
+  }
+
+  function updateFromResponse(response) {
+    const next = response?.structuredContent;
+    if (!next?.view) return;
+    state = next;
+    render();
+  }
+</script>
+</body>
+</html>
