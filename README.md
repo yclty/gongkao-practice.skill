@@ -58,6 +58,25 @@
 
 因此本 Skill 不再绑定某个特定的 `question` 工具或具体前端。
 
+
+## v0.4：ChatGPT 内嵌答题卡
+
+仓库新增 `plugin-ui/`，提供一个可直接连接到 ChatGPT Developer mode 的 MCP Server + MCP Apps UI。
+
+当前交互已覆盖：
+
+- A/B/C/D 点击答题
+- 自动计时
+- 轻反馈
+- 最快思路 / 完整解析
+- 错因一键修正
+- 下一题
+- 训练总结
+
+开发说明见 [plugin-ui/README.md](plugin-ui/README.md)。
+
+> `plugin-ui` 的 session 仅是短期临时状态，不替代每个用户自己的 Project 学习状态。
+
 ## 项目特点
 
 - 覆盖国考、省考、事业单位等常见场景
