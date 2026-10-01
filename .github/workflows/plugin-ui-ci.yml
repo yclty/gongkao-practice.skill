@@ -1,0 +1,47 @@
+name: plugin-ui-ci
+
+on:
+  push:
+    branches:
+      - chatgpt-plugin-ui-v0.4
+    paths:
+      - "plugin-ui/**"
+      - ".github/workflows/plugin-ui-ci.yml"
+  pull_request:
+    paths:
+      - "plugin-ui/**"
+      - ".github/workflows/plugin-ui-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugin-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+      - name: Syntax check
+        run: |
+          node --check server.js
+          node --check lib/quiz-core.js
+      - name: Unit tests
+        run: npm test
+      - name: MCP health check
+        run: |
+          node server.js > /tmp/gongkao-mcp.log 2>&1 &
+          PID=$!
+          trap "kill $PID || true" EXIT
+          for i in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8787/ >/tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/gongkao-mcp.log
+          exit 1

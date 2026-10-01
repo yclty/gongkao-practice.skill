@@ -43,6 +43,40 @@
 - [Project 状态契约](references/project-state-contract.md)
 - [统一错因分类](references/error-taxonomy.md)
 
+
+## v0.3：训练调度与答题协议
+
+本 Fork 已将训练大脑与 UI 解耦：
+
+- [Scheduler Protocol](references/scheduler-protocol.md)：基于时间预算、到期复习、掌握度、错因、考试权重和速度动态调度。
+- [Quiz Event Protocol](references/quiz-event-protocol.md)：统一选择题事件与计时、错因修正、结果回写。
+- [UI Contract](references/ui-contract.md)：定义 inline / fullscreen / summary / 文字兜底的体验原则。
+
+核心目标：
+
+> 用户只需要告诉系统现在有多少时间，剩余训练决策由调度器完成；普通选择题理想情况下只需点击一次。
+
+因此本 Skill 不再绑定某个特定的 `question` 工具或具体前端。
+
+
+## v0.4：ChatGPT 内嵌答题卡
+
+仓库新增 `plugin-ui/`，提供一个可直接连接到 ChatGPT Developer mode 的 MCP Server + MCP Apps UI。
+
+当前交互已覆盖：
+
+- A/B/C/D 点击答题
+- 自动计时
+- 轻反馈
+- 最快思路 / 完整解析
+- 错因一键修正
+- 下一题
+- 训练总结
+
+开发说明见 [plugin-ui/README.md](plugin-ui/README.md)。
+
+> `plugin-ui` 的 session 仅是短期临时状态，不替代每个用户自己的 Project 学习状态。
+
 ## 项目特点
 
 - 覆盖国考、省考、事业单位等常见场景
