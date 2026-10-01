@@ -32,6 +32,28 @@ description: 生成中国公务员考试、省考、事业单位选择题练习�
 - 若宿主有可点击选项和自动计时能力，优先使用；没有时退化为简洁文字答题。
 - 用户说“我现在有 X 分钟”时，以时间为第一约束直接规划训练，不追问题量。
 
+
+## v0.4 可点击答题卡
+
+当宿主暴露以下 MCP 工具时，优先使用结构化答题卡，不再用纯文字作为首选：
+
+- `start_quiz_session`
+- `submit_quiz_answer`
+- `set_quiz_error_code`
+- `next_quiz_question`
+
+使用方式：
+
+1. Scheduler 先确定本轮时间预算、目标 subtype 和题目。
+2. 一次调用 `start_quiz_session`，传入本轮题目列表。
+3. 由内嵌 UI 完成点击答题、自动计时、轻反馈、错因修正和下一题。
+4. UI 会在本轮结束时返回 summary；宿主根据 summary 与 Project 状态更新长期能力画像。
+5. 如果这些工具不可用，立即退化到 `references/quiz-event-protocol.md` 定义的文字模式，不阻塞训练。
+
+MCP Server 只保存短期 session；长期个人状态仍只保存在用户自己的 Project / 宿主中。
+
+实现位于 `plugin-ui/`。
+
 ## 默认训练闭环
 
 `读取宿主状态 → 选择训练目标 → 选真题/生成变式题 → 用户作答 → 诊断错因 → 输出状态增量 → 宿主保存`
