@@ -130,6 +130,21 @@ AI 自拟题必须明确标注“AI 自拟题”或“AI 变式题”，不得�
 
 ### UI
 
+
+### 结构化答题卡优先
+
+如果当前宿主提供 `start_quiz_session` 等 gongkao quiz MCP 工具：
+
+- 先由 Scheduler 完成本轮选题；
+- 再一次性启动 quiz session；
+- 默认让用户直接点击 A/B/C/D；
+- 自动采集有效答题时间；
+- 错题允许一键修正 K/M/U/R/C/D/T/G/S；
+- 本轮结束后读取 summary 更新个人状态。
+
+只有工具不可用时才使用纯文字逐题模式。
+
+
 答题交互遵循 `references/quiz-event-protocol.md`：
 - 可点击 UI 优先
 - 自动计时优先
