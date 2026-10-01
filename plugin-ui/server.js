@@ -142,23 +142,27 @@ function summaryPayload(session) {
 function createQuizServer() {
   const server = new McpServer({
     name: "gongkao-quiz",
-    version: "0.4.0",
+    version: "0.5.0",
   });
 
   registerAppResource(
     server,
     "gongkao-quiz-widget",
-    "ui://gongkao/quiz-v0.4.html",
+    "ui://gongkao/quiz-v0.5.html",
     {},
     async () => ({
       contents: [
         {
-          uri: "ui://gongkao/quiz-v0.4.html",
+          uri: "ui://gongkao/quiz-v0.5.html",
           mimeType: RESOURCE_MIME_TYPE,
           text: widgetHtml,
           _meta: {
             ui: {
               prefersBorder: true,
+              csp: {
+                connectDomains: [],
+                resourceDomains: []
+              }
             },
           },
         },
@@ -178,8 +182,13 @@ function createQuizServer() {
         questions: z.array(questionSchema).min(1).max(20),
       },
       outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.4.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
       },
     },
     async ({ session_id, questions }) => {
@@ -212,8 +221,13 @@ function createQuizServer() {
         elapsed_seconds: z.number().nonnegative().optional(),
       },
       outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.4.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
       },
     },
     async ({ session_id, question_id, answer, elapsed_seconds }) => {
@@ -253,8 +267,13 @@ function createQuizServer() {
         error_code: z.enum(ERROR_CODES),
       },
       outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.4.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
       },
     },
     async ({ session_id, question_id, error_code }) => {
@@ -281,8 +300,13 @@ function createQuizServer() {
         session_id: z.string().min(1),
       },
       outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.4.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
       },
     },
     async ({ session_id }) => {
@@ -329,7 +353,17 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/") {
     res
       .writeHead(200, { "content-type": "application/json; charset=utf-8" })
-      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.4.0", mcp: MCP_PATH }));
+      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.5.0", mcp: MCP_PATH }));
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/.well-known/openai-apps-challenge") {
+    const token = process.env.OPENAI_APPS_CHALLENGE;
+    if (!token) {
+      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("Not configured");
+      return;
+    }
+    res.writeHead(200, { "content-type": "text/plain; charset=utf-8" }).end(token);
     return;
   }
 

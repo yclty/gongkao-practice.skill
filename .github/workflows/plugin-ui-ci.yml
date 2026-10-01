@@ -1,19 +1,23 @@
-name: plugin-ui-ci
+name: plugin-public-ci
 
 on:
   push:
-    branches:
-      - chatgpt-plugin-ui-v0.4
     paths:
       - "plugin-ui/**"
+      - "plugin-package/**"
+      - "PRIVACY.md"
+      - "TERMS.md"
       - ".github/workflows/plugin-ui-ci.yml"
   pull_request:
     paths:
       - "plugin-ui/**"
+      - "plugin-package/**"
+      - "PRIVACY.md"
+      - "TERMS.md"
       - ".github/workflows/plugin-ui-ci.yml"
 
 jobs:
-  test:
+  mcp:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,7 +35,17 @@ jobs:
           node --check lib/quiz-core.js
       - name: Unit tests
         run: npm test
-      - name: MCP health check
+      - name: Review metadata checks
+        run: |
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 4
+          test "$(grep -c 'openWorldHint: false' server.js)" -eq 4
+          test "$(grep -c 'destructiveHint: false' server.js)" -eq 4
+          grep -q 'openai-apps-challenge' server.js
+          grep -q 'connectDomains: \[\]' server.js
+          grep -q 'resourceDomains: \[\]' server.js
+      - name: MCP health and domain challenge
+        env:
+          OPENAI_APPS_CHALLENGE: test-openai-domain-token
         run: |
           node server.js > /tmp/gongkao-mcp.log 2>&1 &
           PID=$!
@@ -39,9 +53,38 @@ jobs:
           for i in {1..20}; do
             if curl --fail --silent http://127.0.0.1:8787/ >/tmp/health.json; then
               cat /tmp/health.json
-              exit 0
+              break
             fi
             sleep 1
           done
-          cat /tmp/gongkao-mcp.log
-          exit 1
+          test "$(curl --fail --silent http://127.0.0.1:8787/.well-known/openai-apps-challenge)" = "test-openai-domain-token"
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build portable plugin package
+        env:
+          MCP_URL: https://plugin.example.com/mcp
+          DEVELOPER_NAME: Test Publisher
+        run: node plugin-package/build-package.mjs
+      - name: Validate package structure
+        run: |
+          test -f dist/gongkao-coach/plugin.json
+          test -f dist/gongkao-coach/mcp.json
+          test -f dist/gongkao-coach/skills/gongkao-onboarding/SKILL.md
+          test -f dist/gongkao-coach/skills/gongkao-coach/SKILL.md
+          test -f dist/gongkao-coach/assets/icon.svg
+          test -f dist/gongkao-coach/assets/logo.svg
+          node -e "JSON.parse(require('fs').readFileSync('dist/gongkao-coach/plugin.json','utf8')); JSON.parse(require('fs').readFileSync('dist/gongkao-coach/mcp.json','utf8'));"
+          ! grep -R "__MCP_URL__\|__DEVELOPER_NAME__" dist/gongkao-coach
+          grep -q 'https://plugin.example.com/mcp' dist/gongkao-coach/mcp.json
+          grep -q 'viewBox="0 0 256 256"' dist/gongkao-coach/assets/icon.svg
+      - name: Create review ZIP
+        run: |
+          cd dist
+          zip -r gongkao-coach.zip gongkao-coach
+          test -s gongkao-coach.zip

@@ -1,4 +1,4 @@
-# Gongkao Quiz Plugin UI v0.4
+# Gongkao Quiz MCP + UI Runtime v0.5
 
 这是 `gongkao-practice.skill` 的可点击答题 UI 最小实现。
 
@@ -70,21 +70,23 @@ npx @modelcontextprotocol/inspector@latest
 http://localhost:8787/mcp
 ```
 
-## 在 ChatGPT 中开发测试
+## 生产部署
 
-ChatGPT 连接远程 MCP 需要 HTTPS。开发阶段可使用 ngrok：
-
-```bash
-ngrok http 8787
-```
-
-得到公网地址后，在 ChatGPT Developer mode 中添加 MCP：
+公开 Plugin 使用时，MCP Server 必须部署在公网 HTTPS 地址，例如：
 
 ```text
-https://<your-domain>/mcp
+https://your-production-domain.example/mcp
 ```
 
-当前 OpenAI 官方插件开发流程建议在 ChatGPT 的 Plugins / Developer mode 中连接 MCP，并使用支持插件的 ChatGPT surface 测试。
+生产部署需要：
+
+- 设置 `OPENAI_APPS_CHALLENGE`，用于域名验证；
+- 保证 `/.well-known/openai-apps-challenge` 返回该 token；
+- 保持 `/mcp` 为 Streamable HTTP MCP 入口；
+- 使用稳定域名，不使用临时测试隧道作为公开发布地址；
+- UI CSP 与实际访问域名保持一致。
+
+公开发布流程与构建说明见 `../plugin-package/gongkao-coach/README.md`。
 
 ## 工具
 
@@ -117,7 +119,7 @@ https://<your-domain>/mcp
 
 ## 重要限制
 
-v0.4 的 session 使用进程内 Map，仅用于开发和小规模测试：
+当前 session 使用进程内 Map，适合作为短期答题状态：
 
 - 服务重启后 session 消失
 - 多实例部署不会自动共享 session
