@@ -1,0 +1,19 @@
+{
+  "name": "gongkao-quiz-mcp",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server and embedded quiz UI for the gongkao coach.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "zod": "^3.25.76"
+  }
+}
