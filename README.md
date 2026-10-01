@@ -15,18 +15,22 @@
 
 
 
-## 开箱即用
+## 最终用户使用方式
 
-如果你的目标不是开发题库，而是直接作为个人备考系统使用：
+项目的最终交付目标是公开可安装的 **“考公上岸 Coach” Plugin**。
 
-1. 每个学习者新建一个独立 ChatGPT Project。
-2. 将 [PROJECT_INSTRUCTIONS.md](PROJECT_INSTRUCTIONS.md) 复制到 Project 指令。
-3. 将 [BOOTSTRAP_PROMPT.md](BOOTSTRAP_PROMPT.md) 作为第一次初始化消息发送。
-4. 初始化完成后，日常直接说“开始今天训练”。
+发布后，普通用户不需要 GitHub、代码配置或手工复制长提示词：
 
-完整说明见 [QUICKSTART.md](QUICKSTART.md)。
+1. 在 ChatGPT Plugin Directory 安装“考公上岸 Coach”。
+2. 长期备考时，为自己创建一个独立 ChatGPT Project。
+3. 在 Project 中说：“初始化我的考公系统”。
+4. 后续直接说：“我现在有10分钟，开始今天训练”。
 
-> 不要让多个学习者长期共用同一个 Project；公共 Skill 可以共享，个人学习状态必须隔离。
+Plugin 内自带 onboarding skill、训练 skill 和可点击答题 UI。
+
+> 一个长期学习 Project 只对应一个学习者，避免不同人的能力画像和错题状态混在一起。
+
+当前源码版仍保留 [PROJECT_INSTRUCTIONS.md](PROJECT_INSTRUCTIONS.md)、[BOOTSTRAP_PROMPT.md](BOOTSTRAP_PROMPT.md) 和 [QUICKSTART.md](QUICKSTART.md)，用于 Plugin 正式发布前的兼容使用。
 
 ## 本 Fork 的运行架构
 
@@ -61,7 +65,7 @@
 
 ## v0.4：ChatGPT 内嵌答题卡
 
-仓库新增 `plugin-ui/`，提供一个可直接连接到 ChatGPT Developer mode 的 MCP Server + MCP Apps UI。
+仓库新增 `plugin-ui/`，提供公开 Plugin 使用的 MCP Server + MCP Apps UI 运行时。
 
 当前交互已覆盖：
 
@@ -76,6 +80,31 @@
 开发说明见 [plugin-ui/README.md](plugin-ui/README.md)。
 
 > `plugin-ui` 的 session 仅是短期临时状态，不替代每个用户自己的 Project 学习状态。
+
+## v0.5：公开 Plugin 发布包
+
+仓库新增 `plugin-package/gongkao-coach/`，按 OpenAI portable Agent Plugins 格式准备最终发布包：
+
+- Plugin manifest 模板
+- MCP manifest 模板
+- onboarding skill
+- adaptive coach skill
+- 正向 / 负向审核用例
+- Plugin 图标
+- 隐私政策与使用条款
+- 发布检查清单
+- 一键生成最终提交目录的构建脚本
+
+部署生产 MCP 后，通过：
+
+```bash
+MCP_URL="https://你的生产域名/mcp" \
+DEVELOPER_NAME="你的已验证发布者名称" \
+node plugin-package/build-package.mjs
+```
+
+生成最终可打包上传的 `dist/gongkao-coach/`。
+
 
 ## 项目特点
 
