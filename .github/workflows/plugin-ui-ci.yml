@@ -40,13 +40,14 @@ jobs:
           node --check server.js
           node --check lib/quiz-core.js
           node --check lib/question-provider.js
+          node --check lib/project-state.js
       - name: Unit tests
         run: npm test
       - name: Review metadata checks
         run: |
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 5
-          test "$(grep -c 'openWorldHint: false' server.js)" -eq 5
-          test "$(grep -c 'destructiveHint: false' server.js)" -eq 5
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 7
+          test "$(grep -c 'openWorldHint: false' server.js)" -eq 7
+          test "$(grep -c 'destructiveHint: false' server.js)" -eq 7
           grep -q 'openai-apps-challenge' server.js
           grep -q 'connectDomains: \[\]' server.js
           grep -q 'resourceDomains: \[\]' server.js
