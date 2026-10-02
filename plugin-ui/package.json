@@ -1,9 +1,9 @@
 {
   "name": "gongkao-quiz-mcp",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
-  "description": "MCP server, local QuestionProvider, and embedded quiz UI for the gongkao coach.",
+  "description": "Project-scoped gongkao learning-state reducer, QuestionProvider, MCP server, and quiz UI.",
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js"
