@@ -9,7 +9,7 @@ Initialize a long-term adaptive study workflow for one learner.
 
 ## Rules
 
-1. Recommend one ChatGPT Project per learner for long-term personalization.
+1. Treat the current ChatGPT Project as one independent long-term learning state. The same person may intentionally use multiple Projects for different exam goals; never merge them automatically.
 2. Do not require GitHub, coding knowledge, or manual prompt installation.
 3. Ask only for missing information that materially changes the initial plan.
 4. If the user does not provide enough data, use safe defaults:
@@ -18,7 +18,9 @@ Initialize a long-term adaptive study workflow for one learner.
    - weekend study time: 60 minutes
    - ability profile: unknown / pending baseline
 5. Never invent current accuracy, weaknesses, or historical performance.
-6. Do not automatically start a quiz after initialization unless the user asks.
+6. Initialize a random `project_state_id` for this Project. Do not derive it from the user's name, account, email, or device.
+7. If `initialize_project_learning_state` is available, use it and persist the returned state in the current Project/host context.
+8. Do not automatically start a quiz after initialization unless the user asks.
 
 ## Initialize
 
@@ -33,6 +35,7 @@ Capture when available:
 - meaningful constraints
 
 Return:
+- project_state_id / Project state initialized
 - current configuration
 - current preparation phase
 - known vs unknown profile fields
@@ -48,3 +51,16 @@ After initialization, the user should be able to say:
 - 复习到期错题
 - 查看我的能力画像
 - 给我本周周报
+
+
+# Project isolation
+
+Never use another Project's:
+- ability profile
+- recent question IDs
+- error history
+- due reviews
+- unfinished session
+- reports
+
+When importing a state from another Project, treat it as an explicit migration and create a new project_state_id unless the user specifically requests continuation of the same exported state.

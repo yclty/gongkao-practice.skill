@@ -1,6 +1,19 @@
-# Gongkao Quiz MCP + UI Runtime v0.6
+# Gongkao Quiz MCP + UI Runtime v0.7
 
 这是 `gongkao-practice.skill` 的可点击答题 UI 最小实现。
+
+## v0.7 Project 状态隔离
+
+长期学习状态不按 ChatGPT 账号存到 MCP，而按当前 Project 隔离。
+
+新增两个无状态工具：
+
+- `initialize_project_learning_state`：生成当前 Project 的独立 state 与 `project_state_id`
+- `apply_project_learning_events`：输入旧 state + attempt events，返回新 state
+
+Quiz 启动工具可接收 `project_state_id`。session summary 会原样带回，用于防止把 Project A 的训练结果写入 Project B。
+
+MCP 只短期保存 quiz session；长期 state 必须由当前 Project / host 保存。
 
 ## v0.6 本地题库
 

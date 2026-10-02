@@ -138,6 +138,32 @@ QUESTION_BANK_PATH=../local-data/gongkao-question-bank.jsonl npm start
 详见 [题库审计](references/gongkao-question-bank-audit.md)。
 
 
+## v0.7：Project-scoped Personal State
+
+个人学习状态现在按 **ChatGPT Project** 隔离：
+
+```text
+Project A（国考）      → project_state_id = ps_A → 独立画像/错题/SRS
+Project B（陕西省考）  → project_state_id = ps_B → 独立画像/错题/SRS
+Project C（事业单位）  → project_state_id = ps_C → 独立画像/错题/SRS
+```
+
+即使三个 Project 属于同一个 ChatGPT 账号，也不自动合并。
+
+v0.7 新增：
+
+- `references/project-scoped-personal-state.md`
+- `plugin-ui/lib/project-state.js`
+- `initialize_project_learning_state`
+- `apply_project_learning_events`
+- Quiz session 的 `project_state_id` 绑定
+- session summary 回传完整 attempt metadata
+- Project mismatch 检查
+- 紧凑状态窗口：1000 个近期题 ID、300 条近期 attempt、每 subtype 30 条样本
+
+MCP 的 reducer 是无状态的：它只计算新 state，不保存长期用户画像。
+
+
 ## 项目特点
 
 - 覆盖国考、省考、事业单位等常见场景

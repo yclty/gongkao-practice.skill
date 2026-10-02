@@ -16,6 +16,11 @@ import {
   summarizeSession,
 } from "./lib/quiz-core.js";
 import { loadQuestionBank, selectQuestions } from "./lib/question-provider.js";
+import {
+  applyProjectLearningEvents,
+  assertSessionProjectMatch,
+  createProjectLearningState,
+} from "./lib/project-state.js";
 
 const widgetHtml = readFileSync(new URL("./public/quiz-widget.html", import.meta.url), "utf8");
 const sessions = new Map();
@@ -86,12 +91,13 @@ function getSession(sessionId) {
   return session;
 }
 
-function createSession(questions, sessionId) {
+function createSession(questions, sessionId, projectStateId = null) {
   pruneSessions();
   const id = sessionId?.trim() || randomUUID();
   const session = {
     id,
     questions,
+    project_state_id: projectStateId,
     index: 0,
     attempts: [],
     created_at: now(),
@@ -115,6 +121,7 @@ function questionPayload(session) {
   const q = currentQuestion(session);
   if (!q) return null;
   return {
+    project_state_id: session.project_state_id,
     question: publicQuestion(q, session.index, session.questions.length),
     stats: summarizeSession(session),
   };
@@ -125,6 +132,7 @@ function feedbackPayload(session) {
   const attempt = currentAttempt(session);
   if (!q || !attempt) return null;
   return {
+    project_state_id: session.project_state_id,
     question: publicQuestion(q, session.index, session.questions.length),
     result: {
       answer: attempt.answer,
@@ -144,11 +152,16 @@ function feedbackPayload(session) {
 
 function summaryPayload(session) {
   return {
+    project_state_id: session.project_state_id,
     stats: summarizeSession(session),
     total_questions: session.questions.length,
     completed: session.index >= session.questions.length - 1,
     attempts: session.attempts.map((item) => ({
       question_id: item.question_id,
+      module: item.module,
+      subtype: item.subtype ?? null,
+      source_type: item.source_type ?? "practice",
+      exam_type: item.exam_type ?? null,
       correct: item.correct,
       elapsed_seconds: item.elapsed_seconds,
       speed_status: item.speed_status,
@@ -160,7 +173,7 @@ function summaryPayload(session) {
 function createQuizServer() {
   const server = new McpServer({
     name: "gongkao-quiz",
-    version: "0.6.0",
+    version: "0.7.0",
   });
 
   registerAppResource(
@@ -197,6 +210,7 @@ function createQuizServer() {
         "Starts a short multiple-choice training session and renders the interactive quiz card. Use after the coach has selected the questions for the user's current time budget.",
       inputSchema: {
         session_id: z.string().min(1).optional(),
+        project_state_id: z.string().startsWith("ps_").optional(),
         questions: z.array(questionSchema).min(1).max(20),
       },
       outputSchema,
@@ -209,8 +223,8 @@ function createQuizServer() {
         ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
       },
     },
-    async ({ session_id, questions }) => {
-      const session = createSession(questions, session_id);
+    async ({ session_id, project_state_id, questions }) => {
+      const session = createSession(questions, session_id, project_state_id ?? null);
       return reply("question", session.id, questionPayload(session), "Quiz session started.");
     }
   );
@@ -224,6 +238,7 @@ function createQuizServer() {
         "Selects single-choice questions from the configured local canonical question bank using scheduler targets, exclusions, exam filters, and source provenance, then starts the interactive quiz session.",
       inputSchema: {
         session_id: z.string().min(1).optional(),
+        project_state_id: z.string().startsWith("ps_").optional(),
         count: z.number().int().min(1).max(20).default(5),
         targets: z.array(
           z.object({
@@ -256,7 +271,11 @@ function createQuizServer() {
         if (!questions.length) {
           return errorReply(input.session_id, "No compatible questions matched the current bank filters.");
         }
-        const session = createSession(questions, input.session_id);
+        const session = createSession(
+          questions,
+          input.session_id,
+          input.project_state_id ?? null
+        );
         return reply(
           "question",
           session.id,
@@ -315,6 +334,10 @@ function createQuizServer() {
       const result = evaluateQuestion(q, answer, elapsed_seconds);
       session.attempts.push({
         question_id: q.question_id,
+        module: q.module,
+        subtype: q.subtype ?? null,
+        source_type: q.source_type ?? "practice",
+        exam_type: q.provenance?.exam_type ?? null,
         ...result,
       });
       return reply(
@@ -397,6 +420,104 @@ function createQuizServer() {
     }
   );
 
+
+  server.registerTool(
+    "initialize_project_learning_state",
+    {
+      title: "Initialize Project learning state",
+      description:
+        "Creates a new independent learning-state document for the current ChatGPT Project. The returned state must be saved by the host in that Project; the MCP server does not persist it.",
+      inputSchema: {
+        goal: z.record(z.any()).optional(),
+      },
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+    },
+    async ({ goal }) => {
+      const state = createProjectLearningState({ goal: goal ?? {} });
+      return {
+        content: [{
+          type: "text",
+          text: `Initialized independent Project learning state ${state.project_state_id}.`
+        }],
+        structuredContent: {
+          project_state_id: state.project_state_id,
+          state,
+        },
+      };
+    }
+  );
+
+  server.registerTool(
+    "apply_project_learning_events",
+    {
+      title: "Apply learning events to Project state",
+      description:
+        "Pure state reducer: validates that the quiz/session belongs to the supplied Project state, applies attempt events, and returns a new state. The server does not retain the resulting state.",
+      inputSchema: {
+        state: z.record(z.any()),
+        project_state_id: z.string().startsWith("ps_"),
+        attempts: z.array(
+          z.object({
+            question_id: z.string().min(1),
+            module: z.string().min(1),
+            subtype: z.string().nullable().optional(),
+            source_type: sourceTypeSchema.optional(),
+            exam_type: z.string().nullable().optional(),
+            correct: z.boolean(),
+            elapsed_seconds: z.number().nonnegative().nullable().optional(),
+            speed_status: z.enum(["ok", "slow", "unknown"]).optional(),
+            error_code: z.enum(ERROR_CODES).nullable().optional(),
+            attempted_at: z.string().optional(),
+          })
+        ).max(200),
+        session_summary: z.record(z.any()).optional(),
+        session_completed: z.boolean().optional(),
+        unfinished_session: z.record(z.any()).optional(),
+      },
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+    },
+    async ({
+      state,
+      project_state_id,
+      attempts,
+      session_summary,
+      session_completed,
+      unfinished_session,
+    }) => {
+      try {
+        assertSessionProjectMatch(state, project_state_id);
+        const result = applyProjectLearningEvents(state, attempts, {
+          session_summary,
+          session_completed,
+          unfinished_session,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: `Applied ${result.patch.attempts_applied} attempt(s) to ${project_state_id}; revision ${result.patch.to_revision}.`
+          }],
+          structuredContent: result,
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: "text",
+            text: error instanceof Error ? error.message : "Project state update failed."
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
   return server;
 }
 
@@ -425,7 +546,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/") {
     res
       .writeHead(200, { "content-type": "application/json; charset=utf-8" })
-      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.6.0", mcp: MCP_PATH }));
+      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.7.0", mcp: MCP_PATH }));
     return;
   }
 

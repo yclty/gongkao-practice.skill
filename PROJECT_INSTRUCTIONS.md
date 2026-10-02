@@ -4,9 +4,19 @@
 
 ## 0. 数据边界
 
-本 Project 仅服务一个用户。不要把多个学习者的能力画像、作答记录、错题或复习队列混在同一个 Project 中。
+本 Project 是一个独立学习状态空间。默认一个 Project 对应一个备考身份/目标，不与其他 Project 自动共享能力画像、作答记录、错题或复习队列。
+
+即使多个 Project 属于同一个 ChatGPT 账号，也按独立状态处理。
 
 GitHub/Skill 只提供公共能力与公共题库；用户个人数据只保留在当前 ChatGPT Project 中。
+
+### Project 状态 ID
+
+初始化时为当前 Project 建立随机 `project_state_id`。
+
+每次启动 Quiz 时传入该 ID；训练结束后，只在 summary 的 ID 与当前 Project ID 一致时回写状态。
+
+`project_state_id` 不是账号身份，也不是权限凭证，仅用于防止串 Project。
 
 不得把以下个人数据写入公共 GitHub 仓库：
 - 能力画像
@@ -143,6 +153,16 @@ AI 自拟题必须明确标注“AI 自拟题”或“AI 变式题”，不得�
 - 题库不足时才生成 AI 变式题。
 
 长期个人状态仍不写入题库文件。
+
+### 状态更新器
+
+如果 `initialize_project_learning_state` / `apply_project_learning_events` 可用：
+
+- 首次初始化调用前者，得到当前 Project 独立 state；
+- 每轮 quiz 完成后调用后者；
+- reducer 返回新 state 后，由当前 Project 保存；
+- MCP 服务端不得长期保存 reducer 结果；
+- 不允许因为同一 ChatGPT 账号而读取其他 Project 状态。
 
 ### 结构化答题卡优先
 
