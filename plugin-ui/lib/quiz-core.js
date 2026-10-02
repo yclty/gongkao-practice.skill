@@ -6,6 +6,15 @@ export function publicQuestion(question, index, total) {
     module: question.module,
     subtype: question.subtype ?? null,
     source_type: question.source_type ?? "practice",
+    provenance: question.provenance
+      ? {
+          source_provider: question.provenance.source_provider ?? null,
+          source_exam: question.provenance.source_exam ?? null,
+          year: question.provenance.year ?? null,
+          province: question.provenance.province ?? null,
+          exam_type: question.provenance.exam_type ?? null,
+        }
+      : null,
     stem: question.stem,
     material: question.material ?? null,
     options: question.options,

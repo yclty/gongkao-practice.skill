@@ -1,0 +1,39 @@
+{
+  "sid": 90001,
+  "source": "2025年国家公务员录用考试《行测》（测试卷）",
+  "model": "[{\"name\":\"政治理论\",\"snum\":1,\"enum\":1},{\"name\":\"资料分析\",\"snum\":2,\"enum\":2}]",
+  "questions": [
+    {
+      "id": 1001,
+      "titleHtml": "测试题一",
+      "type": "single",
+      "globalAccuracy": 80,
+      "correctAnswer": "1",
+      "options": [
+        {"label": "A", "value": "0", "text": "甲"},
+        {"label": "B", "value": "1", "text": "乙"},
+        {"label": "C", "value": "2", "text": "丙"},
+        {"label": "D", "value": "3", "text": "丁"}
+      ],
+      "analysisHtml": "正确答案为B。",
+      "tag": "理论政策",
+      "materialHtml": ""
+    },
+    {
+      "id": 1002,
+      "titleHtml": "测试多选题",
+      "type": "multiple",
+      "globalAccuracy": 40,
+      "correctAnswer": "0,2",
+      "options": [
+        {"label": "A", "value": "0", "text": "甲"},
+        {"label": "B", "value": "1", "text": "乙"},
+        {"label": "C", "value": "2", "text": "丙"},
+        {"label": "D", "value": "3", "text": "丁"}
+      ],
+      "analysisHtml": "正确答案为AC。",
+      "tag": "增长率",
+      "materialHtml": "测试材料"
+    }
+  ]
+}

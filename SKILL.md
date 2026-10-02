@@ -54,6 +54,37 @@ MCP Server 只保存短期 session；长期个人状态仍只保存在用户自�
 
 实现位于 `plugin-ui/`。
 
+
+## v0.6 QuestionProvider
+
+题库选择不再默认依赖 AI 临时生成。
+
+优先级：
+
+1. 如果宿主提供 `start_quiz_from_bank` 且本地 QuestionProvider 已配置，优先让 Scheduler 只输出训练目标和过滤条件，由 QuestionProvider 从本地题库取题。
+2. 将个人近期已做题 ID 作为 `exclude_question_ids` 传入，减少无意义重复。
+3. `platform_import` 表示第三方题库导入，不得显示为“官方已核验真题”。
+4. 只有明确核验来源的题目使用 `official_real`。
+5. QuestionProvider 没有足够题目时，才回退到 `start_quiz_session` + AI 变式题，并标记 `ai_variant`。
+6. 当前点击式 UI 只自动训练 SINGLE / JUDGE；MULTIPLE 保留在题库中但暂不进入单选答题卡。
+
+典型调用：
+
+```json
+{
+  "count": 5,
+  "targets": [
+    {"module": "资料分析", "subtype": "两期比重", "count": 4},
+    {"module": "判断推理", "count": 1}
+  ],
+  "exclude_question_ids": ["..."],
+  "exam_type": "国考",
+  "source_types": ["official_real", "platform_import"]
+}
+```
+
+题库审计与字段映射见 `references/gongkao-question-bank-audit.md`。
+
 ## 默认训练闭环
 
 `读取宿主状态 → 选择训练目标 → 选真题/生成变式题 → 用户作答 → 诊断错因 → 输出状态增量 → 宿主保存`

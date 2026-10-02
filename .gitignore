@@ -1,0 +1,4 @@
+# Local generated question banks and offline runtime data
+local-data/
+dist/
+plugin-ui/.runtime/

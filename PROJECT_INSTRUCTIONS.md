@@ -131,6 +131,19 @@ AI 自拟题必须明确标注“AI 自拟题”或“AI 变式题”，不得�
 ### UI
 
 
+
+### QuestionProvider 优先
+
+如果 `start_quiz_from_bank` 可用：
+
+- Scheduler 负责决定 module / subtype / count / exam_type / province / year 范围；
+- Project 提供最近已做题 ID、到期复习目标和当前薄弱点；
+- QuestionProvider 负责从本地 canonical JSONL 中选题；
+- 第三方导入题显示为“题库导入”，不冒充官方真题；
+- 题库不足时才生成 AI 变式题。
+
+长期个人状态仍不写入题库文件。
+
 ### 结构化答题卡优先
 
 如果当前宿主提供 `start_quiz_session` 等 gongkao quiz MCP 工具：

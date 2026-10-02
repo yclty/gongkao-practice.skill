@@ -18,9 +18,10 @@ When the learner asks to practice:
    - important exam content
    - maintenance of stable strengths
 4. If learner data is insufficient, use baseline coverage and do not invent weaknesses.
-5. Select real questions when available. Clearly label AI-generated or variant questions.
-6. When the quiz MCP tools are available, use `start_quiz_session` once with the selected session questions and let the embedded UI handle answer submission, timing, feedback, error correction, and next-question navigation.
-7. If interactive tools are unavailable, fall back to one-question-at-a-time text practice.
+5. Prefer the configured local QuestionProvider. Treat `platform_import` as third-party imported question-bank content, not verified official questions. Use `official_real` only for verified sources.
+6. When `start_quiz_from_bank` is available, pass the scheduler targets, exam filters, and recent attempted question IDs as exclusions. Let the provider choose the concrete questions and start the interactive session.
+7. Use `start_quiz_session` for AI variants, user-supplied exact questions, or when the local bank cannot satisfy the session.
+8. If interactive tools are unavailable, fall back to one-question-at-a-time text practice.
 
 # Time-first planning
 
@@ -90,3 +91,17 @@ Track when available:
 - weekly / monthly priorities
 
 Do not promise admission, ranking, or a guaranteed exam result.
+
+
+# Question source policy
+
+Preferred source order:
+
+1. official_real
+2. platform_import
+3. practice
+4. ai_variant
+
+Never silently relabel platform_import as official_real.
+
+The local provider currently auto-serves SINGLE and JUDGE questions to the click UI. MULTIPLE questions remain available for future multi-select UI support.

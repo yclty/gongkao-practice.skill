@@ -1,6 +1,25 @@
-# Gongkao Quiz MCP + UI Runtime v0.5
+# Gongkao Quiz MCP + UI Runtime v0.6
 
 这是 `gongkao-practice.skill` 的可点击答题 UI 最小实现。
+
+## v0.6 本地题库
+
+先在仓库根目录生成 canonical JSONL：
+
+```bash
+python scripts/import_gongkao_repository.py \
+  --source ../gongkao/tools/saduck-scraper/saduck-tiku-json \
+  --output local-data/gongkao-question-bank.jsonl
+```
+
+启动时配置：
+
+```bash
+cd plugin-ui
+QUESTION_BANK_PATH=../local-data/gongkao-question-bank.jsonl npm start
+```
+
+新增 `start_quiz_from_bank` 工具，支持按 module / subtype / exam_type / province / year 和 source_type 选题，并支持传入 `exclude_question_ids` 避免近期重复。
 
 ## 已实现
 
@@ -89,6 +108,10 @@ https://your-production-domain.example/mcp
 公开发布流程与构建说明见 `../plugin-package/gongkao-coach/README.md`。
 
 ## 工具
+
+### start_quiz_from_bank
+
+推荐入口。Scheduler 只提供训练目标与过滤条件，服务端从 `QUESTION_BANK_PATH` 选择题目并直接创建答题 session。
 
 ### start_quiz_session
 

@@ -15,10 +15,13 @@ import {
   publicQuestion,
   summarizeSession,
 } from "./lib/quiz-core.js";
+import { loadQuestionBank, selectQuestions } from "./lib/question-provider.js";
 
 const widgetHtml = readFileSync(new URL("./public/quiz-widget.html", import.meta.url), "utf8");
 const sessions = new Map();
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+
+const sourceTypeSchema = z.enum(["official_real", "platform_import", "ai_variant", "practice", "real"]);
 
 const optionSchema = z.object({
   label: z.enum(["A", "B", "C", "D"]),
@@ -29,7 +32,7 @@ const questionSchema = z.object({
   question_id: z.string().min(1),
   module: z.string().min(1),
   subtype: z.string().optional(),
-  source_type: z.enum(["real", "ai_variant", "practice"]).optional(),
+  source_type: sourceTypeSchema.optional(),
   stem: z.string().min(1),
   material: z.string().optional(),
   options: z.array(optionSchema).min(2).max(6),
@@ -80,6 +83,21 @@ function getSession(sessionId) {
   pruneSessions();
   const session = sessions.get(sessionId);
   if (session) touch(session);
+  return session;
+}
+
+function createSession(questions, sessionId) {
+  pruneSessions();
+  const id = sessionId?.trim() || randomUUID();
+  const session = {
+    id,
+    questions,
+    index: 0,
+    attempts: [],
+    created_at: now(),
+    last_access_at: now(),
+  };
+  sessions.set(id, session);
   return session;
 }
 
@@ -142,7 +160,7 @@ function summaryPayload(session) {
 function createQuizServer() {
   const server = new McpServer({
     name: "gongkao-quiz",
-    version: "0.5.0",
+    version: "0.6.0",
   });
 
   registerAppResource(
@@ -192,18 +210,72 @@ function createQuizServer() {
       },
     },
     async ({ session_id, questions }) => {
-      pruneSessions();
-      const id = session_id?.trim() || randomUUID();
-      const session = {
-        id,
-        questions,
-        index: 0,
-        attempts: [],
-        created_at: now(),
-        last_access_at: now(),
-      };
-      sessions.set(id, session);
-      return reply("question", id, questionPayload(session), "Quiz session started.");
+      const session = createSession(questions, session_id);
+      return reply("question", session.id, questionPayload(session), "Quiz session started.");
+    }
+  );
+
+  registerAppTool(
+    server,
+    "start_quiz_from_bank",
+    {
+      title: "Start quiz from local question bank",
+      description:
+        "Selects single-choice questions from the configured local canonical question bank using scheduler targets, exclusions, exam filters, and source provenance, then starts the interactive quiz session.",
+      inputSchema: {
+        session_id: z.string().min(1).optional(),
+        count: z.number().int().min(1).max(20).default(5),
+        targets: z.array(
+          z.object({
+            module: z.string().min(1).optional(),
+            subtype: z.string().min(1).optional(),
+            count: z.number().int().min(1).max(20),
+          })
+        ).max(10).optional(),
+        exclude_question_ids: z.array(z.string().min(1)).max(5000).optional(),
+        source_types: z.array(sourceTypeSchema).max(5).optional(),
+        exam_type: z.string().min(1).optional(),
+        province: z.string().min(1).optional(),
+        year_min: z.number().int().min(1990).max(2100).optional(),
+        year_max: z.number().int().min(1990).max(2100).optional(),
+      },
+      outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+      _meta: {
+        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+      },
+    },
+    async (input) => {
+      try {
+        const bank = loadQuestionBank(process.env.QUESTION_BANK_PATH);
+        const questions = selectQuestions(bank, input);
+        if (!questions.length) {
+          return errorReply(input.session_id, "No compatible questions matched the current bank filters.");
+        }
+        const session = createSession(questions, input.session_id);
+        return reply(
+          "question",
+          session.id,
+          {
+            ...questionPayload(session),
+            bank_selection: {
+              requested_count: input.count,
+              selected_count: questions.length,
+              source: "QUESTION_BANK_PATH"
+            }
+          },
+          `Started a quiz with ${questions.length} question(s) from the local bank.`
+        );
+      } catch (error) {
+        return errorReply(
+          input.session_id,
+          error instanceof Error ? error.message : "Question bank selection failed."
+        );
+      }
     }
   );
 
@@ -353,7 +425,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/") {
     res
       .writeHead(200, { "content-type": "application/json; charset=utf-8" })
-      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.5.0", mcp: MCP_PATH }));
+      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.6.0", mcp: MCP_PATH }));
     return;
   }
 
