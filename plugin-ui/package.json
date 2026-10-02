@@ -1,9 +1,9 @@
 {
   "name": "gongkao-quiz-mcp",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
-  "description": "Start-first interruptible gongkao scheduler, Project state reducer, QuestionProvider, MCP server, and quiz UI.",
+  "description": "Context-aware study routes, question-bank status, real-paper practice, Project state, and quiz UI.",
   "scripts": {
     "start": "node server.js",
     "test": "node --test test/*.test.js"
