@@ -1,6 +1,18 @@
-# Gongkao Quiz MCP + UI Runtime v0.8
+# Gongkao Quiz MCP + UI Runtime v0.9
 
 这是 `gongkao-practice.skill` 的可点击答题 UI 最小实现。
+
+## v0.9 学习路线与真题整卷
+
+新增：
+- `get_question_bank_status`
+- `configure_project_study_route`
+- `start_paper_from_bank`
+- route / chapter / set / paper / quick / review session modes
+- canonical paper metadata
+- 题库状态与个人画像状态分离
+
+`plan_training_session(include_launcher=true)` 会根据当前场景返回推荐入口。
 
 ## v0.8 随开随练
 
