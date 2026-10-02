@@ -105,7 +105,7 @@ git pull
 local-test\prepare-local-runtime.cmd
 ```
 
-2. 如果旁边存在 `../gongkao` 仓库，会自动导入 SaDuck 题库；否则可以先只启动运行时。
+2. 脚本会寻找 `../gongkao`；如果没有，会自动从 GitHub 拉取 `yclty/gongkao` 的题库目录并生成 canonical JSONL。
 
 3. 双击：
 
@@ -153,3 +153,22 @@ MCP Inspector 可以直接验证 **MCP / QuestionProvider / state reducer**。
 ChatGPT 内的可点击答题卡需要 ChatGPT 能访问 MCP Server；这不由 repo marketplace 自动提供。因此 v0.8.1 不假装“本地安装后点击卡片即可工作”。
 
 这两个层面都稳定后，再决定是否需要为 ChatGPT UI 增加一个稳定可访问的 MCP 入口。
+
+
+## C. 导出带题库的线下包
+
+先完成题库准备，然后双击：
+
+```text
+local-test\build-offline-package.cmd
+```
+
+输出：
+
+```text
+dist\gongkao-coach-offline.zip
+```
+
+这个 ZIP 会包含生成后的 canonical 题库，可以交给另一台机器继续做本地 MCP / Inspector 测试，不需要再次下载题库源。
+
+> ChatGPT Desktop 的 Skill-only 本地插件仍然不会自动连接 localhost MCP。要在 ChatGPT 内直接刷导入真题，需要一个 ChatGPT 可访问的 MCP 地址；这与是否公开发布 Plugin 是两回事。

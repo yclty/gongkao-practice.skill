@@ -37,15 +37,15 @@ Capture when available:
 Return:
 - project_state_id / Project state initialized
 - a compact configuration summary
+- the default Project study route
 - current preparation phase
 - known vs unknown profile fields
+- question-bank status when the tool exists
 - a short first-week direction
-- one obvious primary action:
-  - **直接开始** — recommended; build the profile while practicing
-- secondary actions:
-  - 选一个专项
-  - 导入已有错题/记录
-  - 看看怎么用
+- a context-aware launcher:
+  - deep/non-work: continue route / chapter / set / real paper / quick
+  - fragmented: 3-question quick / due review / route continuation
+  - unknown context: system recommendation / route / chapter / set / quick
 
 After initialization, teach only the minimum:
 - 开始练习
@@ -67,3 +67,18 @@ Never use another Project's:
 - reports
 
 When importing a state from another Project, treat it as an explicit migration and create a new project_state_id unless the user specifically requests continuation of the same exported state.
+
+
+# Route customization
+
+Initialization should create a default route, but do not force the learner to accept it forever.
+
+Tell the learner they can later say:
+- 制定我的学习路线
+- 先资料分析，再判断推理
+- 把数量关系放后面
+- 晚上按路线集中学，工作时间碎片刷
+
+Do not require work-hour configuration during first-run onboarding; allow it to be added later.
+
+If question-bank tools are unavailable, do not describe the situation as personal-data scarcity. Say the real-question runtime is not connected.

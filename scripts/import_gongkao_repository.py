@@ -173,6 +173,10 @@ def convert_question(
 
     return {
         "question_id": question_id,
+        "paper_id": f"saduck_p_{paper.get('sid')}",
+        "paper_title": str(paper.get("source") or source_exam).strip(),
+        "paper_position": position,
+        "paper_total": len(paper.get("questions") or []),
         "question_type": question_type,
         "interactive_supported": question_type in {"SINGLE", "JUDGE"} and "," not in answer,
         "source_type": "platform_import",
@@ -260,7 +264,7 @@ def main() -> None:
         source_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     metadata = {
-        "schema_version": "0.6",
+        "schema_version": "0.9",
         "source": str(source),
         "source_manifest": source_manifest,
         "canonical_unique_questions": counts["questions"],

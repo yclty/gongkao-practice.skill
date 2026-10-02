@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  createDefaultStudyRoute,
+  defaultStudyPreferences,
+} from "./learning-route.js";
 
 const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30];
 const MAX_RECENT_QUESTION_IDS = 1000;
@@ -28,6 +32,8 @@ function emptyState({ goal = {}, now } = {}) {
     initialized_at: timestamp,
     updated_at: timestamp,
     goal: clone(goal),
+    study_preferences: defaultStudyPreferences(),
+    study_route: createDefaultStudyRoute(goal),
     ability_profile: { subtypes: {} },
     review_queue: [],
     recent_question_ids: [],

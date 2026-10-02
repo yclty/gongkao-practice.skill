@@ -105,3 +105,14 @@ test("pause update can persist unfinished session without a new attempt", () => 
   assert.deepEqual(result.state.unfinished_session.remaining_questions, ["q2", "q3"]);
   assert.equal(result.patch.attempts_applied, 0);
 });
+
+
+test("new Project state includes independent study preferences and a default route", () => {
+  const state = createProjectLearningState({
+    goal: { exam_targets: ["国考"] },
+    now: "2026-10-02T00:00:00Z",
+  });
+  assert.equal(state.study_preferences.fragmented_batch_questions, 3);
+  assert.equal(state.study_route.exam_type, "国考");
+  assert.equal(state.study_route.steps[0].module, "资料分析");
+});

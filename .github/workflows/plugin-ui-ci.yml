@@ -42,15 +42,16 @@ jobs:
           node --check lib/question-provider.js
           node --check lib/project-state.js
           node --check lib/adaptive-scheduler.js
+          node --check lib/learning-route.js
       - name: Unit tests
         run: npm test
       - name: Review metadata checks
         run: |
-          test "$(grep -c 'readOnlyHint:' server.js)" -eq 9
-          test "$(grep -c 'readOnlyHint: true' server.js)" -eq 1
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 8
-          test "$(grep -c 'openWorldHint: false' server.js)" -eq 9
-          test "$(grep -c 'destructiveHint: false' server.js)" -eq 9
+          test "$(grep -c 'readOnlyHint:' server.js)" -eq 12
+          test "$(grep -c 'readOnlyHint: true' server.js)" -eq 3
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 9
+          test "$(grep -c 'openWorldHint: false' server.js)" -eq 12
+          test "$(grep -c 'destructiveHint: false' server.js)" -eq 12
           grep -q 'openai-apps-challenge' server.js
           grep -q 'connectDomains: \[\]' server.js
           grep -q 'resourceDomains: \[\]' server.js
@@ -69,6 +70,9 @@ jobs:
           assert rows[0]['module'] == '政治理论'
           assert rows[0]['subtype'] == '理论政策'
           assert rows[0]['source_type'] == 'platform_import'
+          assert rows[0]['paper_id'] == 'saduck_p_90001'
+          assert rows[0]['paper_position'] == 1
+          assert rows[0]['paper_total'] == 2
           assert rows[1]['correct_answer'] == 'A,C'
           assert rows[1]['interactive_supported'] is False
           print('fixture import ok')
@@ -131,5 +135,6 @@ jobs:
           test -f plugins/gongkao-coach/skills/gongkao-coach/SKILL.md
           test -f plugins/gongkao-coach/assets/icon.svg
           test -f plugins/gongkao-coach/assets/logo.svg
+          test -f local-test/build-offline-package.cmd
           cmp plugin-package/gongkao-coach/skills/gongkao-onboarding/SKILL.md plugins/gongkao-coach/skills/gongkao-onboarding/SKILL.md
           cmp plugin-package/gongkao-coach/skills/gongkao-coach/SKILL.md plugins/gongkao-coach/skills/gongkao-coach/SKILL.md

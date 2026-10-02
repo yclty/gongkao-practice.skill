@@ -74,16 +74,92 @@ test("unfinished session is resumed before making a new plan", () => {
   assert.equal(plan.atomic_batch_questions, 2);
 });
 
-test("launcher gives a single obvious primary action", () => {
-  const first = launcherForState(state());
-  assert.equal(first.primary_action.label, "直接开始");
-  assert.equal(first.secondary_actions.length, 3);
+test("launcher gives context-aware choices and resumes unfinished work", () => {
+  const first = launcherForState(
+    state(),
+    { study_context: "neutral" },
+    { configured: true, stats: { interactive_supported: 100, papers: 3 } },
+    "2026-10-02T12:00:00Z"
+  );
+  assert.equal(first.primary_action.label, "系统推荐");
+  assert.equal(first.actions.some((item) => item.mode === "set"), true);
 
   const returning = launcherForState(
     state({
       recent_attempts: [{ question_id: "q1" }],
       unfinished_session: { project_state_id: "ps_test" },
-    })
+    }),
+    { study_context: "deep" },
+    { configured: true, stats: { interactive_supported: 100, papers: 3 } },
+    "2026-10-02T12:00:00Z"
   );
   assert.equal(returning.primary_action.label, "继续上次");
+});
+
+
+test("route mode creates a focused deep-study request", () => {
+  const s = state({
+    study_route: {
+      current_step_id: "route_step_01",
+      steps: [
+        { id: "route_step_01", module: "资料分析", subtype: "增长率", title: "资料分析 · 增长率", status: "active" }
+      ]
+    }
+  });
+  const plan = planAdaptiveTraining(
+    s,
+    { session_mode: "route" },
+    "2026-10-02T13:00:00Z"
+  );
+  assert.equal(plan.session_mode, "route");
+  assert.equal(plan.planned_questions, 10);
+  assert.equal(plan.target.subtype, "增长率");
+  assert.equal(plan.question_request.tool, "start_quiz_from_bank");
+});
+
+test("set mode creates a 20-question balanced set", () => {
+  const plan = planAdaptiveTraining(
+    state({
+      study_route: {
+        current_step_id: "r1",
+        steps: [
+          { id: "r1", module: "资料分析", title: "资料分析", status: "active" },
+          { id: "r2", module: "判断推理", title: "判断推理", status: "pending" },
+          { id: "r3", module: "言语理解与表达", title: "言语", status: "pending" },
+          { id: "r4", module: "数量关系", title: "数量", status: "pending" },
+          { id: "r5", module: "常识判断", title: "常识", status: "pending" }
+        ]
+      }
+    }),
+    { session_mode: "set" },
+    "2026-10-02T13:00:00Z"
+  );
+  assert.equal(plan.session_mode, "set");
+  assert.equal(plan.planned_questions, 20);
+  assert.equal(plan.question_request.targets.length, 5);
+  assert.equal(
+    plan.question_request.targets.reduce((sum, item) => sum + item.count, 0),
+    20
+  );
+});
+
+test("paper mode routes to the real-paper tool", () => {
+  const plan = planAdaptiveTraining(
+    state(),
+    { session_mode: "paper", paper_id: "saduck_p_1" },
+    "2026-10-02T13:00:00Z"
+  );
+  assert.equal(plan.session_mode, "paper");
+  assert.equal(plan.question_request.tool, "start_paper_from_bank");
+  assert.equal(plan.question_request.paper_id, "saduck_p_1");
+});
+
+test("quick mode stays intentionally short", () => {
+  const plan = planAdaptiveTraining(
+    state(),
+    { session_mode: "quick" },
+    "2026-10-02T13:00:00Z"
+  );
+  assert.equal(plan.session_mode, "quick");
+  assert.equal(plan.planned_questions, 3);
 });

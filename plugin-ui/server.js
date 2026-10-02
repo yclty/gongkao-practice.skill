@@ -15,7 +15,13 @@ import {
   publicQuestion,
   summarizeSession,
 } from "./lib/quiz-core.js";
-import { loadQuestionBank, selectQuestions } from "./lib/question-provider.js";
+import {
+  bankStats,
+  loadQuestionBank,
+  questionBankCatalog,
+  selectPaper,
+  selectQuestions,
+} from "./lib/question-provider.js";
 import {
   applyProjectLearningEvents,
   assertSessionProjectMatch,
@@ -25,6 +31,7 @@ import {
   launcherForState,
   planAdaptiveTraining,
 } from "./lib/adaptive-scheduler.js";
+import { configureStudyRoute } from "./lib/learning-route.js";
 
 const widgetHtml = readFileSync(new URL("./public/quiz-widget.html", import.meta.url), "utf8");
 const sessions = new Map();
@@ -199,21 +206,55 @@ function pausePayload(session) {
   };
 }
 
+
+function getQuestionBankStatus() {
+  const path = process.env.QUESTION_BANK_PATH;
+  if (!path) {
+    return {
+      configured: false,
+      code: "QUESTION_BANK_NOT_CONFIGURED",
+      message: "真题库未接入当前运行时；这与个人能力画像数据不足是两件事。",
+      stats: null,
+      catalog: null,
+    };
+  }
+
+  try {
+    const bank = loadQuestionBank(path);
+    const catalog = questionBankCatalog(bank, { limit: 60 });
+    return {
+      configured: true,
+      code: "QUESTION_BANK_READY",
+      message: `题库已加载：${catalog.stats.interactive_supported} 道可交互题，${catalog.stats.papers} 套试卷。`,
+      stats: catalog.stats,
+      catalog,
+    };
+  } catch (error) {
+    return {
+      configured: false,
+      code: "QUESTION_BANK_LOAD_FAILED",
+      message: error instanceof Error ? error.message : "题库加载失败。",
+      stats: null,
+      catalog: null,
+    };
+  }
+}
+
 function createQuizServer() {
   const server = new McpServer({
     name: "gongkao-quiz",
-    version: "0.8.0",
+    version: "0.9.0",
   });
 
   registerAppResource(
     server,
     "gongkao-quiz-widget",
-    "ui://gongkao/quiz-v0.8.html",
+    "ui://gongkao/quiz-v0.9.html",
     {},
     async () => ({
       contents: [
         {
-          uri: "ui://gongkao/quiz-v0.8.html",
+          uri: "ui://gongkao/quiz-v0.9.html",
           mimeType: RESOURCE_MIME_TYPE,
           text: widgetHtml,
           _meta: {
@@ -240,7 +281,7 @@ function createQuizServer() {
       inputSchema: {
         session_id: z.string().min(1).optional(),
         project_state_id: z.string().startsWith("ps_").optional(),
-        questions: z.array(questionSchema).min(1).max(20),
+        questions: z.array(questionSchema).min(1).max(200),
       },
       outputSchema,
       annotations: {
@@ -249,7 +290,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async ({ session_id, project_state_id, questions }) => {
@@ -273,12 +314,12 @@ function createQuizServer() {
       inputSchema: {
         session_id: z.string().min(1).optional(),
         project_state_id: z.string().startsWith("ps_").optional(),
-        count: z.number().int().min(1).max(20).default(5),
+        count: z.number().int().min(1).max(50).default(5),
         targets: z.array(
           z.object({
             module: z.string().min(1).optional(),
             subtype: z.string().min(1).optional(),
-            count: z.number().int().min(1).max(20),
+            count: z.number().int().min(1).max(50),
           })
         ).max(10).optional(),
         exclude_question_ids: z.array(z.string().min(1)).max(5000).optional(),
@@ -295,7 +336,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async (input) => {
@@ -343,6 +384,83 @@ function createQuizServer() {
     }
   );
 
+
+  registerAppTool(
+    server,
+    "start_paper_from_bank",
+    {
+      title: "Start a real paper from the question bank",
+      description:
+        "Starts one complete imported exam paper from the configured canonical question bank. Use for full-paper practice when the learner chooses 做一套真题试卷.",
+      inputSchema: {
+        session_id: z.string().min(1).optional(),
+        project_state_id: z.string().startsWith("ps_").optional(),
+        paper_id: z.string().min(1).optional(),
+        source_types: z.array(sourceTypeSchema).max(5).optional(),
+        exam_type: z.string().min(1).optional(),
+        province: z.string().min(1).optional(),
+        year_min: z.number().int().min(1990).max(2100).optional(),
+        year_max: z.number().int().min(1990).max(2100).optional(),
+        require_complete: z.boolean().optional(),
+      },
+      outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+      _meta: {
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
+      },
+    },
+    async (input) => {
+      try {
+        const bank = loadQuestionBank(process.env.QUESTION_BANK_PATH);
+        const selected = selectPaper(bank, {
+          ...input,
+          require_complete: input.require_complete !== false,
+        });
+        if (!selected?.questions?.length) {
+          return errorReply(
+            input.session_id,
+            "No complete interactive paper matched the current filters."
+          );
+        }
+
+        const session = createSession(
+          selected.questions,
+          input.session_id,
+          input.project_state_id ?? null,
+          {
+            source: "paper",
+            paper: selected.paper,
+            filters: {
+              exam_type: input.exam_type ?? null,
+              province: input.province ?? null,
+              year_min: input.year_min ?? null,
+              year_max: input.year_max ?? null,
+            },
+          }
+        );
+
+        return reply(
+          "question",
+          session.id,
+          {
+            ...questionPayload(session),
+            paper_selection: selected.paper,
+          },
+          `Started paper: ${selected.paper.title} (${selected.paper.interactive_questions} questions).`
+        );
+      } catch (error) {
+        return errorReply(
+          input.session_id,
+          error instanceof Error ? error.message : "Question paper selection failed."
+        );
+      }
+    }
+  );
+
   registerAppTool(
     server,
     "submit_quiz_answer",
@@ -363,7 +481,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async ({ session_id, question_id, answer, elapsed_seconds }) => {
@@ -413,7 +531,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async ({ session_id, question_id, error_code }) => {
@@ -446,7 +564,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async ({ session_id }) => {
@@ -484,7 +602,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.9.html" },
       },
     },
     async ({ session_id }) => {
@@ -500,6 +618,108 @@ function createQuizServer() {
   );
 
 
+
+  server.registerTool(
+    "get_question_bank_status",
+    {
+      title: "Get question bank status",
+      description:
+        "Reports whether the canonical question bank is configured and returns available modules, subtypes, and imported papers. Use this to distinguish missing personal learning history from missing question-bank data.",
+      inputSchema: {
+        include_catalog: z.boolean().optional(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+    },
+    async ({ include_catalog }) => {
+      const status = getQuestionBankStatus();
+      const structuredContent = include_catalog
+        ? status
+        : {
+            configured: status.configured,
+            code: status.code,
+            message: status.message,
+            stats: status.stats,
+          };
+      return {
+        content: [{ type: "text", text: status.message }],
+        structuredContent,
+      };
+    }
+  );
+
+  server.registerTool(
+    "configure_project_study_route",
+    {
+      title: "Configure Project study route",
+      description:
+        "Pure Project-state reducer for customizing the learner's route and study-scene preferences. It returns a new state but does not persist user data on the MCP server.",
+      inputSchema: {
+        state: z.record(z.any()),
+        project_state_id: z.string().startsWith("ps_"),
+        name: z.string().min(1).optional(),
+        exam_type: z.string().min(1).optional(),
+        reset_to_default: z.boolean().optional(),
+        current_step_id: z.string().min(1).optional(),
+        steps: z.array(
+          z.object({
+            id: z.string().min(1).optional(),
+            module: z.string().min(1),
+            subtype: z.string().nullable().optional(),
+            title: z.string().min(1).optional(),
+            target_sessions: z.number().int().positive().nullable().optional(),
+          })
+        ).max(50).optional(),
+        study_preferences: z.record(z.any()).optional(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+    },
+    async ({
+      state,
+      project_state_id,
+      name,
+      exam_type,
+      reset_to_default,
+      current_step_id,
+      steps,
+      study_preferences,
+    }) => {
+      try {
+        assertSessionProjectMatch(state, project_state_id);
+        const result = configureStudyRoute(state, {
+          name,
+          exam_type,
+          reset_to_default,
+          current_step_id,
+          steps,
+          study_preferences,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: `学习路线已生成新版本（revision ${result.state.revision}），请保存回当前 Project。`
+          }],
+          structuredContent: result,
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: "text",
+            text: error instanceof Error ? error.message : "Study route update failed."
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
   server.registerTool(
     "plan_training_session",
     {
@@ -509,6 +729,16 @@ function createQuizServer() {
       inputSchema: {
         state: z.record(z.any()),
         intent: z.enum(["start", "review", "focus"]).optional(),
+        session_mode: z.enum(["auto", "quick", "route", "chapter", "set", "paper", "review", "resume"]).optional(),
+        study_context: z.enum(["auto", "fragmented", "deep", "neutral"]).optional(),
+        local_hour: z.number().int().min(0).max(23).optional(),
+        local_weekday: z.number().int().min(0).max(6).optional(),
+        count: z.number().int().min(1).max(200).optional(),
+        paper_id: z.string().min(1).optional(),
+        exam_type: z.string().min(1).optional(),
+        province: z.string().min(1).optional(),
+        year_min: z.number().int().min(1990).max(2100).optional(),
+        year_max: z.number().int().min(1990).max(2100).optional(),
         available_minutes: z.number().positive().max(180).optional(),
         focus_module: z.string().min(1).optional(),
         focus_subtype: z.string().min(1).optional(),
@@ -524,12 +754,22 @@ function createQuizServer() {
     async (input) => {
       try {
         assertSessionProjectMatch(input.state, input.state.project_state_id);
+        const bankStatus = getQuestionBankStatus();
         const plan = planAdaptiveTraining(input.state, input);
+        const launcher = input.include_launcher
+          ? launcherForState(input.state, input, bankStatus)
+          : null;
         return {
           content: [{ type: "text", text: plan.user_message }],
           structuredContent: {
             plan,
-            launcher: input.include_launcher ? launcherForState(input.state) : null,
+            launcher,
+            bank_status: {
+              configured: bankStatus.configured,
+              code: bankStatus.code,
+              message: bankStatus.message,
+              stats: bankStatus.stats,
+            },
           },
         };
       } catch (error) {
@@ -669,7 +909,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/") {
     res
       .writeHead(200, { "content-type": "application/json; charset=utf-8" })
-      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.8.0", mcp: MCP_PATH }));
+      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.9.0", mcp: MCP_PATH }));
     return;
   }
 
