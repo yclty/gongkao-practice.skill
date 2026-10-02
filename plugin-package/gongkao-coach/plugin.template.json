@@ -1,28 +1,39 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gongkao-coach",
-  "version": "0.5.0",
+  "version": "0.8.0",
   "description": "Long-term adaptive practice coach for Chinese civil-service and public-institution exams.",
   "homepage": "https://github.com/yclty/gongkao-practice.skill",
   "repository": "https://github.com/yclty/gongkao-practice.skill",
   "license": "AGPL-3.0",
-  "keywords": ["gongkao", "civil-service-exam", "study", "quiz", "spaced-repetition"],
+  "keywords": [
+    "gongkao",
+    "civil-service-exam",
+    "study",
+    "quiz",
+    "spaced-repetition"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "考公上岸 Coach",
         "shortDescription": "个性化考公刷题与复习",
-        "longDescription": "根据用户的可用时间、薄弱题型、到期复习、答题速度和高频错因动态安排训练。支持可点击选择题卡片、自动计时、错因修正和间隔复习，并严格区分真题与 AI 变式题。",
+        "longDescription": "打开就能开始、随时暂停的个性化考公训练。系统根据当前 Project 的到期复习、薄弱题型、答题速度和错因自动安排小批次训练；时间长度可选，不要求用户预先估算。支持可点击答题卡、自动计时、错因修正和间隔复习。",
         "developerName": "__DEVELOPER_NAME__",
-        "capabilities": ["自适应训练调度", "可点击答题卡", "错题与间隔复习"],
+        "capabilities": [
+          "自适应训练调度",
+          "可点击答题卡",
+          "错题与间隔复习"
+        ],
         "websiteURL": "https://github.com/yclty/gongkao-practice.skill",
         "supportURL": "https://github.com/yclty/gongkao-practice.skill/issues",
         "privacyPolicyURL": "https://github.com/yclty/gongkao-practice.skill/blob/main/PRIVACY.md",
         "termsOfServiceURL": "https://github.com/yclty/gongkao-practice.skill/blob/main/TERMS.md",
         "defaultPrompt": [
-          "初始化我的考公系统",
-          "我现在有10分钟，开始今天训练",
-          "复习我今天到期的错题"
+          "开始练习",
+          "继续上次",
+          "专练资料分析",
+          "我只有10分钟"
         ],
         "brandColor": "#2F6B4F",
         "brandColorDark": "#8FD3B0",

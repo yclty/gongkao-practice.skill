@@ -1,233 +1,148 @@
-# Quiz Event Protocol v0.3
+# Quiz Event Protocol v0.8
 
 ## 1. 目标
 
-将“训练大脑”与“答题界面”解耦。
+支持“打开就刷、随时暂停、回来继续”的碎片化训练。
 
-同一套训练逻辑应支持：
-- 纯文字聊天
-- 可点击选择题卡片
-- ChatGPT Plugin / MCP UI
-- 全屏长材料答题
-- 独立 Web / App
+UI 不是长期个人状态 source of truth；长期状态仍属于当前 Project。
 
-UI 不是个人学习数据的 source of truth。
-
-## 2. Question Payload
-
-```json
-{
-  "question_id": "GK2025-001",
-  "source_type": "real",
-  "exam_type": "国考",
-  "module": "资料分析",
-  "subtype": "两期比重",
-  "difficulty": "medium",
-  "stem": "...",
-  "material_id": "MAT-001",
-  "options": [
-    {"label": "A", "text": "..."},
-    {"label": "B", "text": "..."},
-    {"label": "C", "text": "..."},
-    {"label": "D", "text": "..."}
-  ],
-  "correct_answer": "C",
-  "target_seconds": 55
-}
-```
-
-正确答案可以在服务端/宿主侧隐藏，不应在作答前暴露给 UI。
-
-## 3. Quiz Events
+## 2. 核心事件
 
 ### QUESTION_SHOWN
 
-```json
-{
-  "type": "QUESTION_SHOWN",
-  "session_id": "session_xxx",
-  "question_id": "GK2025-001",
-  "shown_at": "..."
-}
-```
+记录题目展示。
 
 ### ANSWER_SUBMITTED
 
-```json
-{
-  "type": "ANSWER_SUBMITTED",
-  "session_id": "session_xxx",
-  "question_id": "GK2025-001",
-  "answer": "B",
-  "submitted_at": "...",
-  "elapsed_seconds": 46,
-  "input_mode": "tap"
-}
-```
-
-`elapsed_seconds`：
-- UI 能自动计时时自动采集
-- 纯文字模式无法可靠计时时可为空
-- 不应强迫用户每题手输耗时
+记录答案和自动采集的有效答题时间。
 
 ### ANSWER_EVALUATED
 
-```json
-{
-  "type": "ANSWER_EVALUATED",
-  "question_id": "GK2025-001",
-  "correct": false,
-  "correct_answer": "C",
-  "diagnosed_error": {
-    "primary": "M",
-    "secondary": null,
-    "confidence": 0.72
-  },
-  "speed_status": "ok"
-}
-```
+记录正确性、速度状态与 AI 初判错因。
 
 ### ERROR_CORRECTED
 
-用户可修正 AI 的错因：
-
-```json
-{
-  "type": "ERROR_CORRECTED",
-  "question_id": "GK2025-001",
-  "from": "C",
-  "to": "M"
-}
-```
-
-用户确认后的错因优先级高于 AI 初判。
+用户修正错因时，以用户修正为准。
 
 ### QUESTION_SKIPPED
 
-记录主动跳过，不默认当成知识错误。
+主动跳过不默认视为知识错误。
 
-### SESSION_PAUSED / SESSION_RESUMED
+### SESSION_PAUSED
 
-暂停时间不计入单题有效作答时长。
+可以在题目尚未提交或解析完成后触发。
+
+要求：
+
+- 停止计时；
+- 未提交题不生成错误 attempt；
+- 返回已完成 attempts；
+- 返回 `unfinished_session`；
+- 当前 Project 保存状态。
+
+示例：
+
+```json
+{
+  "type": "SESSION_PAUSED",
+  "project_state_id": "ps_xxx",
+  "session_id": "session_xxx",
+  "unfinished_session": {
+    "target": {
+      "module": "资料分析",
+      "subtype": "增长率"
+    },
+    "current_question_id": "q3",
+    "remaining_questions": ["q3"],
+    "answered_questions": 2
+  }
+}
+```
+
+### SESSION_RESUMED
+
+优先继续 unfinished target。
+
+不要求必须恢复同一个短期 MCP session；session 已过期时，可以按相同 target 重新拉题继续。
 
 ### SESSION_COMPLETED
 
-输出本轮聚合结果和状态增量。
+一个原子批次完成后输出 summary。
 
-## 4. 默认答题交互
+## 3. 默认交互
 
-正常选择题的目标是：
+普通选择题：
 
-**看题 → 点击一个选项**
+**看题 → 点选项**
 
-一次正常作答不要求用户额外输入：
-- 耗时
+同时始终有：
+
+`暂停`
+
+不要求用户输入：
+- 时长
+- 预计题量
+- 单题耗时
 - 信心值
 - 错因
-- 题型
 
-这些应由 UI、题库和 AI 自动生成；只有需要纠正时才让用户介入。
+## 4. Feedback
 
-## 5. Feedback Contract
+答对：轻反馈 + 下一题/暂停。
 
-### 答对
+答错：正确答案 + 最快思路 + 可选错因修正 + 下一题/暂停。
 
-默认只显示轻反馈：
+完整解析默认折叠。
 
-```text
-正确
-用时：46秒（目标≤55秒）
-最快思路：……
-```
+## 5. Atomic Batch
 
-提供：
-- 下一题
-- 看完整解析
+日常默认 3 题。
 
-### 答错
+进度显示的是当前小批次：
 
-默认显示：
+`2 / 3`
 
-```text
-选择 B
-正确答案 C
-初判错因：M 方法不会
-关键一步：……
-```
+而不是让用户看到一个必须完成的 20 题任务。
 
-提供：
-- 修改错因
-- 看最快解法
-- 看完整解析
-- 下一题
+批次结束后由 Scheduler 决定下一小批。
 
-不要默认输出长篇解析。
+## 6. Renderer
 
-## 6. Renderer Capability
+优先：
 
-宿主应声明可用渲染能力：
+1. choice card
+2. auto timer
+3. material panel / fullscreen
+4. text fallback
+
+没有 UI 时，文字模式也必须支持：
+
+- `暂停`
+- `继续上次`
+
+## 7. Summary
+
+完成：
 
 ```json
 {
-  "renderer": {
-    "choice_card": true,
-    "timer": true,
-    "fullscreen": false,
-    "material_panel": true
-  }
+  "paused": false,
+  "project_state_id": "ps_xxx",
+  "stats": {},
+  "attempts": []
 }
 ```
 
-Skill 根据能力选择最佳表现层：
-
-1. 有 choice_card → 点击式选项
-2. 长材料且支持 fullscreen → 全屏
-3. 否则 → 简洁文字兜底
-
-不得因为某个特定 UI 工具不存在而中断训练。
-
-## 7. 文字兜底格式
-
-当没有交互 UI 时：
-
-```text
-资料分析 · 两期比重   3/8
-
-[题干]
-
-A. ...
-B. ...
-C. ...
-D. ...
-
-直接回复 A/B/C/D。
-```
-
-用户只需回复选项。若无法自动计时，不强制要求附带秒数。
-
-## 8. 长材料
-
-资料分析、阅读理解、图表类题目：
-- 材料与题目分离
-- 多题可复用同一 material_id
-- UI 支持时固定材料面板或 fullscreen
-- 文字模式避免重复粘贴完整材料，可引用“沿用上题材料”
-
-## 9. Session Summary Payload
+暂停：
 
 ```json
 {
-  "session_id": "session_xxx",
-  "questions": 8,
-  "correct": 6,
-  "accuracy": 0.75,
-  "active_seconds": 756,
-  "top_error_codes": ["M"],
-  "mastery_changes": [],
-  "review_updates": [],
-  "next_target": {
-    "module": "资料分析",
-    "subtype": "两期比重"
-  }
+  "paused": true,
+  "project_state_id": "ps_xxx",
+  "stats": {},
+  "attempts": [],
+  "unfinished_session": {}
 }
 ```
+
+宿主随后调用 Project state reducer 保存结果。

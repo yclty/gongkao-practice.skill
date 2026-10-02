@@ -21,6 +21,10 @@ import {
   assertSessionProjectMatch,
   createProjectLearningState,
 } from "./lib/project-state.js";
+import {
+  launcherForState,
+  planAdaptiveTraining,
+} from "./lib/adaptive-scheduler.js";
 
 const widgetHtml = readFileSync(new URL("./public/quiz-widget.html", import.meta.url), "utf8");
 const sessions = new Map();
@@ -91,13 +95,14 @@ function getSession(sessionId) {
   return session;
 }
 
-function createSession(questions, sessionId, projectStateId = null) {
+function createSession(questions, sessionId, projectStateId = null, selectionContext = null) {
   pruneSessions();
   const id = sessionId?.trim() || randomUUID();
   const session = {
     id,
     questions,
     project_state_id: projectStateId,
+    selection_context: selectionContext,
     index: 0,
     attempts: [],
     created_at: now(),
@@ -170,21 +175,45 @@ function summaryPayload(session) {
   };
 }
 
+
+function pausePayload(session) {
+  const current = currentQuestion(session);
+  const currentAnswered = Boolean(currentAttempt(session));
+  const startIndex = currentAnswered ? session.index + 1 : session.index;
+  const remaining = session.questions.slice(startIndex).map((item) => item.question_id);
+
+  return {
+    ...summaryPayload(session),
+    paused: true,
+    completed: false,
+    unfinished_session: {
+      project_state_id: session.project_state_id,
+      source_session_id: session.id,
+      target: session.selection_context?.target ?? null,
+      selection_context: session.selection_context ?? null,
+      current_question_id: currentAnswered ? null : current?.question_id ?? null,
+      remaining_questions: remaining,
+      answered_questions: session.attempts.length,
+      paused_at: new Date().toISOString()
+    }
+  };
+}
+
 function createQuizServer() {
   const server = new McpServer({
     name: "gongkao-quiz",
-    version: "0.7.0",
+    version: "0.8.0",
   });
 
   registerAppResource(
     server,
     "gongkao-quiz-widget",
-    "ui://gongkao/quiz-v0.5.html",
+    "ui://gongkao/quiz-v0.8.html",
     {},
     async () => ({
       contents: [
         {
-          uri: "ui://gongkao/quiz-v0.5.html",
+          uri: "ui://gongkao/quiz-v0.8.html",
           mimeType: RESOURCE_MIME_TYPE,
           text: widgetHtml,
           _meta: {
@@ -220,11 +249,16 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
       },
     },
     async ({ session_id, project_state_id, questions }) => {
-      const session = createSession(questions, session_id, project_state_id ?? null);
+      const session = createSession(
+        questions,
+        session_id,
+        project_state_id ?? null,
+        { source: "direct" }
+      );
       return reply("question", session.id, questionPayload(session), "Quiz session started.");
     }
   );
@@ -261,7 +295,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
       },
     },
     async (input) => {
@@ -274,7 +308,18 @@ function createQuizServer() {
         const session = createSession(
           questions,
           input.session_id,
-          input.project_state_id ?? null
+          input.project_state_id ?? null,
+          {
+            source: "bank",
+            target: input.targets?.[0] ?? null,
+            filters: {
+              exam_type: input.exam_type ?? null,
+              province: input.province ?? null,
+              year_min: input.year_min ?? null,
+              year_max: input.year_max ?? null,
+              source_types: input.source_types ?? null
+            }
+          }
         );
         return reply(
           "question",
@@ -318,7 +363,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
       },
     },
     async ({ session_id, question_id, answer, elapsed_seconds }) => {
@@ -368,7 +413,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
       },
     },
     async ({ session_id, question_id, error_code }) => {
@@ -401,7 +446,7 @@ function createQuizServer() {
         destructiveHint: false
       },
       _meta: {
-        ui: { resourceUri: "ui://gongkao/quiz-v0.5.html" },
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
       },
     },
     async ({ session_id }) => {
@@ -420,6 +465,84 @@ function createQuizServer() {
     }
   );
 
+
+
+  registerAppTool(
+    server,
+    "pause_quiz_session",
+    {
+      title: "Pause quiz session",
+      description:
+        "Pauses the current quiz at any point and returns attempts plus an unfinished-session descriptor that the current Project can persist for later continuation.",
+      inputSchema: {
+        session_id: z.string().min(1),
+      },
+      outputSchema,
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+      _meta: {
+        ui: { resourceUri: "ui://gongkao/quiz-v0.8.html" },
+      },
+    },
+    async ({ session_id }) => {
+      const session = getSession(session_id);
+      if (!session) return errorReply(session_id, "Session expired or was not found.");
+      return reply(
+        "summary",
+        session_id,
+        pausePayload(session),
+        "Quiz paused. Save unfinished_session in the current Project to continue later."
+      );
+    }
+  );
+
+
+  server.registerTool(
+    "plan_training_session",
+    {
+      title: "Plan adaptive training",
+      description:
+        "Creates a start-first, interruptible training plan from the current Project state. Time is optional; normal use can simply start and pause whenever needed.",
+      inputSchema: {
+        state: z.record(z.any()),
+        intent: z.enum(["start", "review", "focus"]).optional(),
+        available_minutes: z.number().positive().max(180).optional(),
+        focus_module: z.string().min(1).optional(),
+        focus_subtype: z.string().min(1).optional(),
+        ignore_unfinished: z.boolean().optional(),
+        include_launcher: z.boolean().optional(),
+      },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false
+      },
+    },
+    async (input) => {
+      try {
+        assertSessionProjectMatch(input.state, input.state.project_state_id);
+        const plan = planAdaptiveTraining(input.state, input);
+        return {
+          content: [{ type: "text", text: plan.user_message }],
+          structuredContent: {
+            plan,
+            launcher: input.include_launcher ? launcherForState(input.state) : null,
+          },
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: "text",
+            text: error instanceof Error ? error.message : "Training planning failed."
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
 
   server.registerTool(
     "initialize_project_learning_state",
@@ -546,7 +669,7 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/") {
     res
       .writeHead(200, { "content-type": "application/json; charset=utf-8" })
-      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.7.0", mcp: MCP_PATH }));
+      .end(JSON.stringify({ name: "gongkao-quiz", version: "0.8.0", mcp: MCP_PATH }));
     return;
   }
 

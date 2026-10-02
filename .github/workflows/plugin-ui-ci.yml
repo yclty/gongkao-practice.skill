@@ -41,13 +41,16 @@ jobs:
           node --check lib/quiz-core.js
           node --check lib/question-provider.js
           node --check lib/project-state.js
+          node --check lib/adaptive-scheduler.js
       - name: Unit tests
         run: npm test
       - name: Review metadata checks
         run: |
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 7
-          test "$(grep -c 'openWorldHint: false' server.js)" -eq 7
-          test "$(grep -c 'destructiveHint: false' server.js)" -eq 7
+          test "$(grep -c 'readOnlyHint:' server.js)" -eq 9
+          test "$(grep -c 'readOnlyHint: true' server.js)" -eq 1
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 8
+          test "$(grep -c 'openWorldHint: false' server.js)" -eq 9
+          test "$(grep -c 'destructiveHint: false' server.js)" -eq 9
           grep -q 'openai-apps-challenge' server.js
           grep -q 'connectDomains: \[\]' server.js
           grep -q 'resourceDomains: \[\]' server.js

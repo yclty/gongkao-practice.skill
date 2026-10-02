@@ -210,9 +210,20 @@
     }
     .actions {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 10px;
       margin-top: 16px;
     }
+    .secondary {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 10px 14px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .secondary:disabled { opacity: .5; cursor: default; }
     .primary {
       border: 0;
       border-radius: 10px;
@@ -358,7 +369,7 @@
 
   const initializeBridge = async () => {
     await rpcRequest("ui/initialize", {
-      appInfo: { name: "gongkao-quiz-widget", version: "0.4.0" },
+      appInfo: { name: "gongkao-quiz-widget", version: "0.8.0" },
       appCapabilities: {},
       protocolVersion: "2026-01-26",
     });
@@ -453,6 +464,13 @@
     }
     app.append(options);
 
+    const actions = el("div", "actions");
+    const pause = el("button", "secondary", "暂停");
+    pause.type = "button";
+    pause.addEventListener("click", pauseSession);
+    actions.append(pause);
+    app.append(actions);
+
     requestAnimationFrame(() => startTimer(question.question_id));
   }
 
@@ -536,10 +554,13 @@
     }
 
     const actions = el("div", "actions");
+    const pause = el("button", "secondary", "暂停");
+    pause.type = "button";
+    pause.addEventListener("click", pauseSession);
     const next = el("button", "primary", question.progress.current === question.progress.total ? "查看结果" : "下一题");
     next.type = "button";
     next.addEventListener("click", nextQuestion);
-    actions.append(next);
+    actions.append(pause, next);
     app.append(actions);
   }
 
@@ -554,6 +575,24 @@
       });
     } catch (error) {
       console.error(error);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function pauseSession() {
+    if (busy || !state) return;
+    busy = true;
+    clearTimer();
+    document.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    try {
+      await callTool("pause_quiz_session", { session_id: state.session_id });
+    } catch (error) {
+      console.error(error);
+      document.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+      if (state?.view === "question" && state.payload?.question?.question_id) {
+        startTimer(state.payload.question.question_id);
+      }
     } finally {
       busy = false;
     }
@@ -579,7 +618,7 @@
     app.replaceChildren();
     const stats = payload.stats;
     const card = el("div", "summaryCard");
-    card.append(el("div", "summaryTitle", "本轮训练完成"));
+    card.append(el("div", "summaryTitle", payload.paused ? "已暂停，进度已保留" : "本轮训练完成"));
     card.append(el("div", "score", `${Math.round((stats.accuracy || 0) * 100)}%`));
 
     const grid = el("div", "summaryGrid");
@@ -605,6 +644,12 @@
       });
       block.append(chips);
       card.append(block);
+    }
+
+    if (payload.paused) {
+      const hint = el("div", "errorTitle", "回来后直接说“继续上次”即可，不需要重新选择训练内容。");
+      hint.style.marginTop = "14px";
+      card.append(hint);
     }
 
     app.append(card);

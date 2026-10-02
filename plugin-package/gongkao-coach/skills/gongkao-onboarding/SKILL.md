@@ -36,21 +36,24 @@ Capture when available:
 
 Return:
 - project_state_id / Project state initialized
-- current configuration
+- a compact configuration summary
 - current preparation phase
 - known vs unknown profile fields
-- first-week training framework
-- three next actions:
-  - start baseline diagnosis
-  - import existing mistakes / practice history
-  - browse the system without testing
+- a short first-week direction
+- one obvious primary action:
+  - **直接开始** — recommended; build the profile while practicing
+- secondary actions:
+  - 选一个专项
+  - 导入已有错题/记录
+  - 看看怎么用
 
-After initialization, the user should be able to say:
-- 开始今天训练
-- 我现在有10分钟
-- 复习到期错题
-- 查看我的能力画像
-- 给我本周周报
+After initialization, teach only the minimum:
+- 开始练习
+- 暂停
+- 继续上次
+- 专项训练
+
+Do not make the learner understand Scheduler, SRS, Mastery, or Priority Score before they can start.
 
 
 # Project isolation

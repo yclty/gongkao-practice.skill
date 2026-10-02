@@ -83,3 +83,25 @@ test("session project mismatch is rejected before state write", () => {
   );
   assert.equal(assertSessionProjectMatch(state, state.project_state_id), true);
 });
+
+
+test("pause update can persist unfinished session without a new attempt", () => {
+  const state = createProjectLearningState({ now: "2026-10-02T00:00:00Z" });
+  const result = applyProjectLearningEvents(
+    state,
+    [],
+    {
+      now: "2026-10-02T00:10:00Z",
+      unfinished_session: {
+        project_state_id: state.project_state_id,
+        target: { module: "资料分析", subtype: "增长率" },
+        remaining_questions: ["q2", "q3"],
+      },
+    }
+  );
+
+  assert.equal(result.state.revision, 1);
+  assert.equal(result.state.unfinished_session.project_state_id, state.project_state_id);
+  assert.deepEqual(result.state.unfinished_session.remaining_questions, ["q2", "q3"]);
+  assert.equal(result.patch.attempts_applied, 0);
+});

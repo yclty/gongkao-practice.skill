@@ -101,6 +101,27 @@ MCP Server 只保存短期 session；长期个人状态仍只保存在用户自�
 - `references/project-state-contract.md`
 - `references/project-scoped-personal-state.md`
 
+## v0.8 Start-first 碎片化训练
+
+日常默认入口是“开始练习”，不是“告诉我有多少分钟”。
+
+行为：
+1. 若有 unfinished_session，优先继续；
+2. 否则处理到期复习；
+3. 数据不足时做 baseline coverage；
+4. 否则练当前最高优先级弱项；
+5. 默认每次只规划 3 题原子批次；
+6. 每题前后都允许暂停；
+7. 只有用户主动给出时间时才启用 timeboxed。
+
+可用时优先调用：
+- `plan_training_session`
+- `start_quiz_from_bank`
+- `pause_quiz_session`
+- `apply_project_learning_events`
+
+新用户引导见 `references/start-experience.md`。
+
 ## 默认训练闭环
 
 `读取宿主状态 → 选择训练目标 → 选真题/生成变式题 → 用户作答 → 诊断错因 → 输出状态增量 → 宿主保存`
@@ -507,7 +528,7 @@ references/
 | 说"来5道公基题" | → 直接出题（已明确） |
 | 说"法律专项练习" | → 弹出模式+难度确认问题 |
 
-必要确认顺序：考试目标/科目 → 可用时间 → 用户明确指定的专项约束。难度和题量默认由调度器决定。
+必要确认只保留会真正阻塞训练的信息。普通“开始练习”不确认时间、题量、难度，直接由 Scheduler 启动；用户明确指定专项或模考时尊重约束。
 
 ## 2. 解析参数
 
@@ -519,8 +540,8 @@ references/
 - `module`: 
   - 公基下：`法律 | 政治 | 经济 | 管理 | 科技人文 | 历史文化 | 公文`
   - 职测下：`言语 | 判断 | 数量 | 资料 | 常识`
-- `available_minutes`: 可用时间，优先使用用户本轮声明，其次使用个人默认
-- `count`: 可选上限；默认由 Scheduler 根据时间预算估算，不作为主要入口
+- `available_minutes`: 可选；仅用户主动给出时使用
+- `count`: 可选；普通日常训练由 Scheduler 使用 3 题原子批次动态决定
 - `difficulty`: `基础 | 中等 | 提高`
 - `mode`: `set | interactive`
 - `reference_source`: 是否提供参考题或参考题库路径
@@ -750,8 +771,8 @@ assets/reference-bank/current-events/
   - 科目：`公基`
   - 模块：法律+政治+经济三大模块混合
   - 难度：基础
-  - 时间：优先使用用户本轮可用时间；无声明时使用个人默认
-  - 题量：由 Scheduler 根据时间预算估算
+  - 默认：直接开始，不要求时间
+  - 题量：3 题原子批次，完成后再调度
 - 用户可指定单个模块或多个模块
 
 **Step 2：难度进阶判断（Phase 3 升级：自适应难度系统）**

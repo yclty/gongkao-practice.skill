@@ -103,88 +103,78 @@ AI 自拟题必须明确标注“AI 自拟题”或“AI 变式题”，不得�
 
 ## 7. 每日训练调度
 
-详细算法遵循 `references/scheduler-protocol.md`。
+详细算法遵循：
+- `references/scheduler-protocol.md`
+- `references/start-experience.md`
 
-### Time-first
+### 默认：直接开始
 
-当用户说：
-- “开始今天训练”
-- “我现在有 8 分钟”
-- “今天只有 20 分钟”
+用户说以下任一表达时，不追问时间、题量、难度，直接进入训练：
 
-不要先问题量。优先根据可用时间和当前状态生成 session plan。
+- 开始
+- 开始练习
+- 今天练一下
+- 刷题
+- 来几道
+- 继续练
 
-若用户没有给时间：
-- 使用其个人计划中的默认日均训练时长；
-- 若也未知，默认按 10 分钟微训练启动。
+调度顺序：
 
-### Priority
+1. 有未完成训练 → 继续上次；
+2. 有到期复习 → 到期复习优先；
+3. 数据不足 → baseline coverage；
+4. 否则 → 当前最高优先级弱项。
 
-按 subtype 计算训练优先级，核心因素：
-- 到期复习
-- mastery 缺口
-- 重复错因
-- 考试权重
-- 距离上次训练时间
-- 速度差距
+默认一次规划 3 题原子批次，做完后再根据最新状态重新调度。
 
-不要把固定 40/40/20 当硬规则。
+### 时间是可选项
 
-### 默认时间模式
+只有用户主动说“我只有10分钟”“练20分钟”等表达时，才启用 timeboxed。
 
-- ≤5 分钟：到期复习为主
-- 6～10 分钟：单一弱项微训练
-- 11～20 分钟：复习 + 弱项专项
-- 21～30 分钟：完整训练单元
-- 31～60 分钟：专项 + 小模考/速度训练
+时间模式也允许随时暂停，不要求做满。
 
-### UI
+### 专项直接进入
 
+用户说“专练资料分析”“只练两期比重”等表达时，直接进入 focus 模式，不再询问时间。
 
+### 暂停 / 继续
+
+答题过程中用户可以随时说“暂停”，或点击 UI 的“暂停”。
+
+暂停时：
+- 当前未提交题不判错；
+- 已完成题正常保存；
+- 保存 unfinished_session；
+- 下次“继续上次”优先恢复。
 
 ### QuestionProvider 优先
 
 如果 `start_quiz_from_bank` 可用：
 
-- Scheduler 负责决定 module / subtype / count / exam_type / province / year 范围；
-- Project 提供最近已做题 ID、到期复习目标和当前薄弱点；
-- QuestionProvider 负责从本地 canonical JSONL 中选题；
-- 第三方导入题显示为“题库导入”，不冒充官方真题；
-- 题库不足时才生成 AI 变式题。
-
-长期个人状态仍不写入题库文件。
+- Scheduler 只决定 target 和 3 题原子批次；
+- Project 提供 recent_question_ids 作为排重；
+- QuestionProvider 负责取具体题；
+- 题库不足时才使用 AI 变式题。
 
 ### 状态更新器
 
-如果 `initialize_project_learning_state` / `apply_project_learning_events` 可用：
+如果 `plan_training_session` / `initialize_project_learning_state` / `apply_project_learning_events` 可用：
 
-- 首次初始化调用前者，得到当前 Project 独立 state；
-- 每轮 quiz 完成后调用后者；
-- reducer 返回新 state 后，由当前 Project 保存；
-- MCP 服务端不得长期保存 reducer 结果；
-- 不允许因为同一 ChatGPT 账号而读取其他 Project 状态。
+- `plan_training_session` 负责 start-first 调度；
+- quiz 启动时传入当前 project_state_id；
+- quiz 完成或暂停后，将 attempts / unfinished_session 写回当前 Project state；
+- MCP 不长期保存个人画像。
 
-### 结构化答题卡优先
-
-如果当前宿主提供 `start_quiz_session` 等 gongkao quiz MCP 工具：
-
-- 先由 Scheduler 完成本轮选题；
-- 再一次性启动 quiz session；
-- 默认让用户直接点击 A/B/C/D；
-- 自动采集有效答题时间；
-- 错题允许一键修正 K/M/U/R/C/D/T/G/S；
-- 本轮结束后读取 summary 更新个人状态。
-
-只有工具不可用时才使用纯文字逐题模式。
-
+### UI
 
 答题交互遵循 `references/quiz-event-protocol.md`：
-- 可点击 UI 优先
-- 自动计时优先
-- 长材料支持时用 fullscreen
-- 无 UI 时自动退化为文字
-- 不要求用户每题手输耗时
-- AI 初判错因可由用户修正
+
+- 点击式选项优先
+- 自动计时
+- 始终支持暂停
+- 完整解析按需展开
+- 无 UI 时退化为文字模式
+- 不要求用户每题手输耗时或错因
 
 ## 8. 基线诊断
 
@@ -242,20 +232,21 @@ AI 自拟题必须明确标注“AI 自拟题”或“AI 变式题”，不得�
 
 ## 11. 常用口令
 
-用户可以直接说：
-- 初始化我的考公系统
-- 开始今天训练
-- 今天只有 10 分钟
-- 复习到期错题
+用户最常用的只需要记住：
+- 开始练习
+- 暂停
+- 继续上次
 - 专练资料分析
+
+其他可选口令：
+- 我只有 10 分钟
+- 复习到期错题
 - 专练判断推理
 - 开始申论训练
 - 查看我的能力画像
 - 给我本周周报
 - 调整下周计划
 - 开始一次模考
-- 暂停今天训练
-- 继续上次训练
 
 ## 12. 初始化行为
 
