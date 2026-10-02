@@ -302,7 +302,9 @@
   };
 
   const sourceLabel = (source) => ({
+    official_real: "官方真题",
     real: "真题",
+    platform_import: "题库导入",
     ai_variant: "AI 变式题",
     practice: "练习题",
   }[source] ?? "练习题");
@@ -425,7 +427,11 @@
     app.replaceChildren();
     app.append(renderTopbar(question, true));
 
-    const badge = el("div", "source", sourceLabel(question.source_type));
+    const provenance = question.provenance || {};
+    const sourceParts = [sourceLabel(question.source_type)];
+    if (provenance.year) sourceParts.push(String(provenance.year));
+    if (provenance.exam_type) sourceParts.push(provenance.exam_type);
+    const badge = el("div", "source", sourceParts.join(" · "));
     app.append(badge);
 
     if (question.material) {
