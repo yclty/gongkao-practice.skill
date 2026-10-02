@@ -60,7 +60,7 @@ $entry = [PSCustomObject]@{
         installation = "AVAILABLE"
         authentication = "ON_INSTALL"
     }
-    category = "Education"
+    category = "Education & Research"
 }
 
 $catalog.plugins = @($existing + $entry)
