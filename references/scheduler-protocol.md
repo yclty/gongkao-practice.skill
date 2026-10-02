@@ -1,4 +1,4 @@
-# Scheduler Protocol v0.3
+# Scheduler Protocol v0.7
 
 ## 1. 目标
 
@@ -14,6 +14,21 @@
 - Exam-weighted：考试高频/高价值模块在同等条件下优先。
 - Speed-aware：答对但明显超时也应进入训练。
 - Stable-update：单题不应大幅改变长期能力画像。
+
+## 2.1 Project 隔离
+
+Scheduler 的所有个人输入都必须来自**当前 Project**。
+
+输入至少包含：
+- `project_state_id`
+- 当前 Project 的 goal
+- 当前 Project 的 ability_profile
+- 当前 Project 的 review_queue
+- 当前 Project 的 recent_question_ids
+
+禁止跨 Project 汇总能力画像。
+
+同一账号的不同 Project 应被视为不同训练空间。
 
 ## 3. 子题型状态
 
@@ -128,6 +143,7 @@ speed_gap = clamp((avg_seconds - target_seconds) / target_seconds * 100, 0, 100)
 ```json
 {
   "session_id": "session_xxx",
+  "project_state_id": "ps_xxx",
   "available_minutes": 10,
   "mode": "micro",
   "targets": [
@@ -159,7 +175,16 @@ speed_gap = clamp((avg_seconds - target_seconds) / target_seconds * 100, 0, 100)
 3. 已做过但间隔足够长的真题
 4. AI 变式题
 
-AI 题必须明确标记 source_type=`ai_variant`。
+来源标签统一使用：
+
+- `official_real`
+- `platform_import`
+- `practice`
+- `ai_variant`
+
+AI 题必须明确标记 `source_type=ai_variant`。
+
+调用 QuestionProvider 时，将当前 Project 的 `recent_question_ids` 作为近期排重输入。
 
 ## 9. Mastery 更新
 
