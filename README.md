@@ -15,22 +15,21 @@
 
 
 
-## 最终用户使用方式
+## 最终使用方式
 
-项目的最终交付目标是公开可安装的 **“考公上岸 Coach” Plugin**。
+当前目标改为 **可线下导出、可私有复制、可本地运行的考公学习包**，不以公开 Plugin Directory 上架为前提。
 
-发布后，普通用户不需要 GitHub、代码配置或手工复制长提示词：
+推荐使用方式：
 
-1. 在 ChatGPT Plugin Directory 安装“考公上岸 Coach”。
-2. 长期备考时，为自己创建一个独立 ChatGPT Project。
-3. 在 Project 中说：“初始化我的考公系统”。
-4. 后续直接说：“我现在有10分钟，开始今天训练”。
+1. 每个学习者使用自己的 ChatGPT Project。
+2. 本地准备 canonical QuestionProvider 题库。
+3. 启动本地 MCP + Quiz UI。
+4. 初始化个人备考系统。
+5. 后续直接说：“我现在有10分钟，开始今天训练”。
 
-Plugin 内自带 onboarding skill、训练 skill 和可点击答题 UI。
+`plugin-package/` 保留 portable Plugin 结构，作为线下导出载体；公开发布相关字段不是当前主目标。
 
 > 一个长期学习 Project 只对应一个学习者，避免不同人的能力画像和错题状态混在一起。
-
-当前源码版仍保留 [PROJECT_INSTRUCTIONS.md](PROJECT_INSTRUCTIONS.md)、[BOOTSTRAP_PROMPT.md](BOOTSTRAP_PROMPT.md) 和 [QUICKSTART.md](QUICKSTART.md)，用于 Plugin 正式发布前的兼容使用。
 
 ## 本 Fork 的运行架构
 
@@ -104,6 +103,39 @@ node plugin-package/build-package.mjs
 ```
 
 生成最终可打包上传的 `dist/gongkao-coach/`。
+
+
+## v0.6：接入真实题库 QuestionProvider
+
+已审计 `yclty/gongkao` 的 SaDuck 快照：153 套试卷、18,025 个题目出现次数。
+
+v0.6 新增：
+
+- `scripts/import_gongkao_repository.py`：把另一个仓库的题库快照转换成 canonical JSONL
+- `plugin-ui/lib/question-provider.js`：本地文件型题库 Provider
+- `start_quiz_from_bank`：Scheduler 只传训练目标，服务端直接选题并启动答题卡
+- `platform_import` 来源类型：第三方导入题不再冒充“官方真题”
+- SINGLE / JUDGE 进入点击答题卡，MULTIPLE 暂存等待多选 UI
+
+本地生成题库：
+
+```bash
+python scripts/import_gongkao_repository.py \
+  --source ../gongkao/tools/saduck-scraper/saduck-tiku-json \
+  --output local-data/gongkao-question-bank.jsonl \
+  --meta local-data/gongkao-question-bank.meta.json
+```
+
+启动答题服务：
+
+```bash
+cd plugin-ui
+QUESTION_BANK_PATH=../local-data/gongkao-question-bank.jsonl npm start
+```
+
+生成的大题库文件默认不建议提交到 GitHub。
+
+详见 [题库审计](references/gongkao-question-bank-audit.md)。
 
 
 ## 项目特点
