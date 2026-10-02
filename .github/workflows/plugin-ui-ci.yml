@@ -46,7 +46,9 @@ jobs:
         run: npm test
       - name: Review metadata checks
         run: |
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 9
+          test "$(grep -c 'readOnlyHint:' server.js)" -eq 9
+          test "$(grep -c 'readOnlyHint: true' server.js)" -eq 1
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 8
           test "$(grep -c 'openWorldHint: false' server.js)" -eq 9
           test "$(grep -c 'destructiveHint: false' server.js)" -eq 9
           grep -q 'openai-apps-challenge' server.js
