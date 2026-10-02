@@ -1,0 +1,20 @@
+{
+  "name": "gongkao-local",
+  "interface": {
+    "displayName": "考公上岸 · 本地测试"
+  },
+  "plugins": [
+    {
+      "name": "gongkao-coach",
+      "source": {
+        "source": "local",
+        "path": "./plugins/gongkao-coach"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Education & Research"
+    }
+  ]
+}
