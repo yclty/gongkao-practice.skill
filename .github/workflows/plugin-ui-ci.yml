@@ -1,10 +1,13 @@
-name: plugin-public-ci
+name: gongkao-coach-ci
 
 on:
   push:
     paths:
       - "plugin-ui/**"
       - "plugin-package/**"
+      - "scripts/**"
+      - "tests/fixtures/**"
+      - "references/**"
       - "PRIVACY.md"
       - "TERMS.md"
       - ".github/workflows/plugin-ui-ci.yml"
@@ -12,6 +15,9 @@ on:
     paths:
       - "plugin-ui/**"
       - "plugin-package/**"
+      - "scripts/**"
+      - "tests/fixtures/**"
+      - "references/**"
       - "PRIVACY.md"
       - "TERMS.md"
       - ".github/workflows/plugin-ui-ci.yml"
@@ -33,19 +39,41 @@ jobs:
         run: |
           node --check server.js
           node --check lib/quiz-core.js
+          node --check lib/question-provider.js
       - name: Unit tests
         run: npm test
       - name: Review metadata checks
         run: |
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 4
-          test "$(grep -c 'openWorldHint: false' server.js)" -eq 4
-          test "$(grep -c 'destructiveHint: false' server.js)" -eq 4
+          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 5
+          test "$(grep -c 'openWorldHint: false' server.js)" -eq 5
+          test "$(grep -c 'destructiveHint: false' server.js)" -eq 5
           grep -q 'openai-apps-challenge' server.js
           grep -q 'connectDomains: \[\]' server.js
           grep -q 'resourceDomains: \[\]' server.js
+      - name: Canonical question importer fixture
+        working-directory: ..
+        run: |
+          python scripts/import_gongkao_repository.py \
+            --source tests/fixtures/gongkao-snapshot \
+            --output /tmp/gongkao-questions.jsonl \
+            --meta /tmp/gongkao-questions.meta.json
+          test "$(wc -l < /tmp/gongkao-questions.jsonl)" -eq 2
+          python - <<'PY'
+          import json
+          rows=[json.loads(line) for line in open('/tmp/gongkao-questions.jsonl',encoding='utf-8')]
+          assert rows[0]['correct_answer'] == 'B'
+          assert rows[0]['module'] == '政治理论'
+          assert rows[0]['subtype'] == '理论政策'
+          assert rows[0]['source_type'] == 'platform_import'
+          assert rows[1]['correct_answer'] == 'A,C'
+          assert rows[1]['interactive_supported'] is False
+          print('fixture import ok')
+          PY
+
       - name: MCP health and domain challenge
         env:
           OPENAI_APPS_CHALLENGE: test-openai-domain-token
+          QUESTION_BANK_PATH: /tmp/gongkao-questions.jsonl
         run: |
           node server.js > /tmp/gongkao-mcp.log 2>&1 &
           PID=$!
