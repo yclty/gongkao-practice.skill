@@ -99,20 +99,19 @@ function recencyRank(item) {
   return Number(item.year || 0);
 }
 
-function randomTieBreaker() {
-  return Math.random() - 0.5;
-}
-
 function rankCandidates(items) {
-  return [...items].sort((a, b) => {
-    const sourceDiff = sourceRank(a) - sourceRank(b);
-    if (sourceDiff !== 0) return sourceDiff;
+  return items
+    .map((item) => ({ item, random: Math.random() }))
+    .sort((a, b) => {
+      const sourceDiff = sourceRank(a.item) - sourceRank(b.item);
+      if (sourceDiff !== 0) return sourceDiff;
 
-    const yearDiff = recencyRank(b) - recencyRank(a);
-    if (yearDiff !== 0) return yearDiff;
+      const yearDiff = recencyRank(b.item) - recencyRank(a.item);
+      if (yearDiff !== 0) return yearDiff;
 
-    return randomTieBreaker();
-  });
+      return a.random - b.random;
+    })
+    .map(({ item }) => item);
 }
 
 export function toQuizQuestion(item) {
