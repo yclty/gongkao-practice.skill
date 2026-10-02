@@ -6,7 +6,12 @@
   "homepage": "https://github.com/yclty/gongkao-practice.skill",
   "repository": "https://github.com/yclty/gongkao-practice.skill",
   "license": "AGPL-3.0",
-  "keywords": ["gongkao", "study", "quiz", "spaced-repetition"],
+  "keywords": [
+    "gongkao",
+    "study",
+    "quiz",
+    "spaced-repetition"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
@@ -22,7 +27,8 @@
         "brandColor": "#2F6B4F",
         "brandColorDark": "#8FD3B0",
         "composerIcon": "./assets/icon.svg",
-        "logo": "./assets/logo.svg"
+        "logo": "./assets/logo.svg",
+        "category": "Education & Research"
       },
       "onboardingSkill": "./skills/gongkao-onboarding/SKILL.md"
     }
