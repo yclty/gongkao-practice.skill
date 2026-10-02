@@ -6,6 +6,24 @@
 
 ## A. ChatGPT Desktop：测试 Skill / 教练逻辑
 
+### 最省事：一键安装到个人 marketplace
+
+双击：
+
+```text
+local-test\install-personal-plugin.cmd
+```
+
+脚本会：
+
+- 把 `plugins/gongkao-coach` 复制到 `~/.codex/plugins/gongkao-coach`
+- 安全更新 `~/.agents/plugins/marketplace.json`
+- 保留已有其他插件条目
+
+然后完全退出并重新打开 ChatGPT Desktop，在 Plugins Directory 中找到 `gongkao-coach` 并安装/启用。
+
+也可以不用脚本，直接使用下面的 repo marketplace。
+
 这一步可以测试：
 
 - 初始化
@@ -22,7 +40,7 @@
 plugins/gongkao-coach/
 ```
 
-### 操作
+### Repo marketplace 手动方式
 
 1. 拉取或更新仓库：
 
