@@ -1,6 +1,25 @@
-# Gongkao Quiz MCP + UI Runtime v0.7
+# Gongkao Quiz MCP + UI Runtime v0.8
 
 这是 `gongkao-practice.skill` 的可点击答题 UI 最小实现。
+
+## v0.8 随开随练
+
+普通使用不再要求先填写 available_minutes。
+
+新增：
+- `plan_training_session`：start-first 调度
+- 3 题原子批次
+- `pause_quiz_session`
+- 题目页 / 解析页均可暂停
+- 暂停返回 `unfinished_session`
+- 下次“继续上次”优先恢复
+- timeboxed 仅在用户主动指定时间时启用
+
+默认体验：
+
+```text
+开始练习 → 做题 → 有事就暂停 → 回来继续上次
+```
 
 ## v0.7 Project 状态隔离
 
