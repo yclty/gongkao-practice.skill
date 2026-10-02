@@ -120,3 +120,16 @@ jobs:
           cd dist
           zip -r gongkao-coach.zip gongkao-coach
           test -s gongkao-coach.zip
+
+      - name: Local plugin package checks
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('.agents/plugins/marketplace.json','utf8')); JSON.parse(require('fs').readFileSync('plugins/gongkao-coach/plugin.json','utf8'));"
+          grep -q '"path": "./plugins/gongkao-coach"' .agents/plugins/marketplace.json
+          grep -q '"category": "Education & Research"' .agents/plugins/marketplace.json
+          grep -q '"name": "gongkao-coach"' plugins/gongkao-coach/plugin.json
+          test -f plugins/gongkao-coach/skills/gongkao-onboarding/SKILL.md
+          test -f plugins/gongkao-coach/skills/gongkao-coach/SKILL.md
+          test -f plugins/gongkao-coach/assets/icon.svg
+          test -f plugins/gongkao-coach/assets/logo.svg
+          cmp plugin-package/gongkao-coach/skills/gongkao-onboarding/SKILL.md plugins/gongkao-coach/skills/gongkao-onboarding/SKILL.md
+          cmp plugin-package/gongkao-coach/skills/gongkao-coach/SKILL.md plugins/gongkao-coach/skills/gongkao-coach/SKILL.md
