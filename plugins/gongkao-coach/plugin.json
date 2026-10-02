@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gongkao-coach",
-  "version": "0.9.0",
-  "description": "Context-aware gongkao coach with Project study routes, deep/fragmented modes, sets, and real-paper planning.",
+  "version": "1.0.0",
+  "description": "Local-first AI exam coach with shared browser/chat progress, isolated learner databases and durable adaptive training.",
   "homepage": "https://github.com/yclty/gongkao-practice.skill",
   "repository": "https://github.com/yclty/gongkao-practice.skill",
   "license": "AGPL-3.0",
@@ -16,13 +16,12 @@
     "com.openai": {
       "interface": {
         "displayName": "考公上岸 Coach",
-        "shortDescription": "按场景主动推荐路线、章节、套题和碎片训练",
-        "longDescription": "根据当前 Project 学习路线和当前时段主动推荐训练方式；晚间/周末可选章节深练、20题套题和真题整卷，碎片时间优先3题快刷。",
+        "shortDescription": "本地保存进度，多人各自持续备考",
+        "longDescription": "每个人使用自己的本地学习档案，网页与 AI 聊天共享自动保存的进度。支持诊断、专项、基础过关、错因复习和严格整卷模拟，换聊天与重启后继续。",
         "defaultPrompt": [
           "初始化我的考公系统",
           "开始练习",
-          "按我的学习路线开始",
-          "做一套真题试卷"
+          "按我的学习路线开始"
         ],
         "brandColor": "#2F6B4F",
         "brandColorDark": "#8FD3B0",

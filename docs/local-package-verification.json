@@ -1,0 +1,51 @@
+{
+  "archive": "C:\\Users\\yclty\\OneDrive\\文档\\ChatGPT\\考公\\gongkao-practice.skill\\dist\\gongkao-coach-1.0.0-windows-x64-20261002-175453.zip",
+  "windows": "win32",
+  "checks": [
+    "Windows PowerShell 5.1 install from a ZIP in a Unicode/space path",
+    "Bundled Node and dependencies start all 18 stdio tools without global Node/npm",
+    "Same public ZIP, separate data directories and learner identities",
+    "Forced service termination restores two committed answers and the third draft",
+    "MCP answers are immediately visible through the browser HTTP API",
+    "A fresh chat connection continues the same explicitly bound history",
+    "Personal backup restores into a new learner without overwriting another learner",
+    "Repeated installation prepares a backup and existing MCP connections reconnect",
+    "Packaged real paper retains its deadline and is graded only once after expiry",
+    "Native Codex CLI registers, installs and discovers the Plugin in an isolated configuration",
+    "The installed Codex cache launches its portable mcp.json with the bundled runtime"
+  ],
+  "temporary_directory": "C:\\Users\\yclty\\AppData\\Local\\Temp\\考公 包验证-UgVJM6",
+  "codex": {
+    "registration": {
+      "marketplaceName": "gongkao-local",
+      "installedRoot": "C:\\Users\\yclty\\AppData\\Local\\Temp\\考公 包验证-UgVJM6\\本地 安装",
+      "alreadyAdded": true
+    },
+    "installed": {
+      "pluginId": "gongkao-coach@gongkao-local",
+      "name": "gongkao-coach",
+      "marketplaceName": "gongkao-local",
+      "version": "1.0.0",
+      "installedPath": "C:\\Users\\yclty\\AppData\\Local\\Temp\\考公 包验证-UgVJM6\\Codex 验证配置\\plugins\\cache\\gongkao-local\\gongkao-coach\\1.0.0",
+      "authPolicy": "ON_INSTALL"
+    },
+    "plugin": {
+      "pluginId": "gongkao-coach@gongkao-local",
+      "name": "gongkao-coach",
+      "marketplaceName": "gongkao-local",
+      "version": "1.0.0",
+      "installed": true,
+      "enabled": true,
+      "source": {
+        "source": "local",
+        "path": "C:\\Users\\yclty\\AppData\\Local\\Temp\\考公 包验证-UgVJM6\\本地 安装\\packages\\1.0.0-ccc276fb6afa\\plugins\\gongkao-coach"
+      },
+      "marketplaceSource": {
+        "sourceType": "local",
+        "source": "\\\\?\\C:\\Users\\yclty\\AppData\\Local\\Temp\\考公 包验证-UgVJM6\\本地 安装"
+      },
+      "installPolicy": "AVAILABLE",
+      "authPolicy": "ON_INSTALL"
+    }
+  }
+}

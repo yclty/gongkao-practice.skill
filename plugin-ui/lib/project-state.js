@@ -74,6 +74,7 @@ function computeSubtype(existing, attempt) {
   const samples = [
     ...(existing?.recent_samples ?? []),
     {
+      attempt_id: attempt.attempt_id ?? null,
       question_id: attempt.question_id,
       correct: Boolean(attempt.correct),
       elapsed_seconds: Number.isFinite(attempt.elapsed_seconds)
@@ -137,9 +138,10 @@ function addDays(iso, days) {
 function updateReviewQueue(queue, attempt) {
   const next = [...queue];
   const index = next.findIndex(
-    (item) => item.anchor_question_id === attempt.question_id
+    (item) => attempt.review_task_id ? item.review_task_id === attempt.review_task_id : item.anchor_question_id === attempt.question_id
   );
   const existing = index >= 0 ? next[index] : null;
+  if (attempt.review_task_id && (!existing || existing.module !== attempt.module || existing.subtype !== attempt.subtype)) throw new Error("Review task does not match the question concept");
 
   const shouldReview = !attempt.correct || attempt.speed_status === "slow" || existing;
   if (!shouldReview) return next;
@@ -157,7 +159,8 @@ function updateReviewQueue(queue, attempt) {
   }
 
   const item = {
-    anchor_question_id: attempt.question_id,
+    review_task_id: existing?.review_task_id ?? `rt_${randomUUID()}`,
+    anchor_question_id: existing?.anchor_question_id ?? attempt.question_id,
     module: attempt.module || existing?.module || "UNKNOWN",
     subtype: attempt.subtype || existing?.subtype || "UNKNOWN",
     stage,
@@ -184,6 +187,8 @@ function normalizeAttempt(attempt, timestamp) {
   if (!attempt?.module) throw new Error("attempt.module is required");
 
   return {
+    attempt_id: attempt.attempt_id ?? null,
+    review_task_id: attempt.review_task_id ?? null,
     question_id: String(attempt.question_id),
     module: String(attempt.module),
     subtype: attempt.subtype ? String(attempt.subtype) : "UNKNOWN",
@@ -207,7 +212,13 @@ export function applyProjectLearningEvents(state, attempts, options = {}) {
 
   const next = clone(state);
   const timestamp = isoNow(options.now);
-  const normalized = attempts.map((attempt) => normalizeAttempt(attempt, timestamp));
+  const appliedIds = new Set(next.applied_attempt_ids ?? []);
+  const normalized = attempts.map((attempt) => normalizeAttempt(attempt, timestamp)).filter((attempt) => {
+    if (!attempt.attempt_id) return true;
+    if (appliedIds.has(attempt.attempt_id)) return false;
+    appliedIds.add(attempt.attempt_id);
+    return true;
+  });
 
   for (const attempt of normalized) {
     const key = subtypeKey(attempt.module, attempt.subtype);
@@ -224,10 +235,12 @@ export function applyProjectLearningEvents(state, attempts, options = {}) {
   }
 
   next.recent_attempts = next.recent_attempts.slice(-MAX_RECENT_ATTEMPTS);
+  next.applied_attempt_ids = [...appliedIds].slice(-1000);
   next.revision += 1;
   next.updated_at = timestamp;
 
   if (options.session_summary) {
+    if (options.session_summary.project_state_id && options.session_summary.project_state_id !== state.project_state_id) throw new Error("Summary Project mismatch");
     next.last_session_summary = {
       ...clone(options.session_summary),
       project_state_id: next.project_state_id,
@@ -237,6 +250,7 @@ export function applyProjectLearningEvents(state, attempts, options = {}) {
   if (options.session_completed === true) {
     next.unfinished_session = null;
   } else if (options.unfinished_session) {
+    if (options.unfinished_session.project_state_id && options.unfinished_session.project_state_id !== state.project_state_id) throw new Error("Unfinished session Project mismatch");
     next.unfinished_session = {
       ...clone(options.unfinished_session),
       project_state_id: next.project_state_id,

@@ -1,140 +1,36 @@
-name: gongkao-coach-ci
+name: gongkao-local-ci
 
 on:
   push:
-    paths:
-      - "plugin-ui/**"
-      - "plugin-package/**"
-      - "scripts/**"
-      - "tests/fixtures/**"
-      - "references/**"
-      - "PRIVACY.md"
-      - "TERMS.md"
-      - ".github/workflows/plugin-ui-ci.yml"
+    paths: ["plugin-ui/**", "plugins/**", "plugin-package/**", "packaging/**", "scripts/**", "tests/**", "references/**", ".github/workflows/plugin-ui-ci.yml"]
   pull_request:
-    paths:
-      - "plugin-ui/**"
-      - "plugin-package/**"
-      - "scripts/**"
-      - "tests/fixtures/**"
-      - "references/**"
-      - "PRIVACY.md"
-      - "TERMS.md"
-      - ".github/workflows/plugin-ui-ci.yml"
+    paths: ["plugin-ui/**", "plugins/**", "plugin-package/**", "packaging/**", "scripts/**", "tests/**", "references/**", ".github/workflows/plugin-ui-ci.yml"]
 
 jobs:
-  mcp:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
+  runtime:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
         working-directory: plugin-ui
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install dependencies
-        run: npm install --ignore-scripts
-      - name: Syntax check
-        run: |
-          node --check server.js
-          node --check lib/quiz-core.js
-          node --check lib/question-provider.js
-          node --check lib/project-state.js
-          node --check lib/adaptive-scheduler.js
-          node --check lib/learning-route.js
-      - name: Unit tests
+        run: npm ci --ignore-scripts
+      - name: Runtime and integration tests
+        working-directory: plugin-ui
         run: npm test
-      - name: Review metadata checks
+      - name: Importer quality regression
+        run: python -m unittest discover -s tests -p "test_import*.py"
+      - name: Portable source synchronization
         run: |
-          test "$(grep -c 'readOnlyHint:' server.js)" -eq 12
-          test "$(grep -c 'readOnlyHint: true' server.js)" -eq 3
-          test "$(grep -c 'readOnlyHint: false' server.js)" -eq 9
-          test "$(grep -c 'openWorldHint: false' server.js)" -eq 12
-          test "$(grep -c 'destructiveHint: false' server.js)" -eq 12
-          grep -q 'openai-apps-challenge' server.js
-          grep -q 'connectDomains: \[\]' server.js
-          grep -q 'resourceDomains: \[\]' server.js
-      - name: Canonical question importer fixture
-        working-directory: ${{ github.workspace }}
-        run: |
-          python scripts/import_gongkao_repository.py \
-            --source tests/fixtures/gongkao-snapshot \
-            --output /tmp/gongkao-questions.jsonl \
-            --meta /tmp/gongkao-questions.meta.json
-          test "$(wc -l < /tmp/gongkao-questions.jsonl)" -eq 2
-          python - <<'PY'
-          import json
-          rows=[json.loads(line) for line in open('/tmp/gongkao-questions.jsonl',encoding='utf-8')]
-          assert rows[0]['correct_answer'] == 'B'
-          assert rows[0]['module'] == '政治理论'
-          assert rows[0]['subtype'] == '理论政策'
-          assert rows[0]['source_type'] == 'platform_import'
-          assert rows[0]['paper_id'] == 'saduck_p_90001'
-          assert rows[0]['paper_position'] == 1
-          assert rows[0]['paper_total'] == 2
-          assert rows[1]['correct_answer'] == 'A,C'
-          assert rows[1]['interactive_supported'] is False
-          print('fixture import ok')
-          PY
-
-      - name: MCP health and domain challenge
-        env:
-          OPENAI_APPS_CHALLENGE: test-openai-domain-token
-          QUESTION_BANK_PATH: /tmp/gongkao-questions.jsonl
-        run: |
-          node server.js > /tmp/gongkao-mcp.log 2>&1 &
-          PID=$!
-          trap "kill $PID || true" EXIT
-          for i in {1..20}; do
-            if curl --fail --silent http://127.0.0.1:8787/ >/tmp/health.json; then
-              cat /tmp/health.json
-              break
-            fi
-            sleep 1
-          done
-          test "$(curl --fail --silent http://127.0.0.1:8787/.well-known/openai-apps-challenge)" = "test-openai-domain-token"
-
-  package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Build portable plugin package
-        env:
-          MCP_URL: https://plugin.example.com/mcp
-          DEVELOPER_NAME: Test Publisher
-        run: node plugin-package/build-package.mjs
-      - name: Validate package structure
-        run: |
-          test -f dist/gongkao-coach/plugin.json
-          test -f dist/gongkao-coach/mcp.json
-          test -f dist/gongkao-coach/skills/gongkao-onboarding/SKILL.md
-          test -f dist/gongkao-coach/skills/gongkao-coach/SKILL.md
-          test -f dist/gongkao-coach/assets/icon.svg
-          test -f dist/gongkao-coach/assets/logo.svg
-          node -e "JSON.parse(require('fs').readFileSync('dist/gongkao-coach/plugin.json','utf8')); JSON.parse(require('fs').readFileSync('dist/gongkao-coach/mcp.json','utf8'));"
-          ! grep -R "__MCP_URL__\|__DEVELOPER_NAME__" dist/gongkao-coach
-          grep -q 'https://plugin.example.com/mcp' dist/gongkao-coach/mcp.json
-          grep -q 'viewBox="0 0 256 256"' dist/gongkao-coach/assets/icon.svg
-      - name: Create review ZIP
-        run: |
-          cd dist
-          zip -r gongkao-coach.zip gongkao-coach
-          test -s gongkao-coach.zip
-
-      - name: Local plugin package checks
-        run: |
-          node -e "JSON.parse(require('fs').readFileSync('.agents/plugins/marketplace.json','utf8')); JSON.parse(require('fs').readFileSync('plugins/gongkao-coach/plugin.json','utf8'));"
-          grep -q '"path": "./plugins/gongkao-coach"' .agents/plugins/marketplace.json
-          grep -q '"category": "Education & Research"' .agents/plugins/marketplace.json
-          grep -q '"name": "gongkao-coach"' plugins/gongkao-coach/plugin.json
-          test -f plugins/gongkao-coach/skills/gongkao-onboarding/SKILL.md
-          test -f plugins/gongkao-coach/skills/gongkao-coach/SKILL.md
-          test -f plugins/gongkao-coach/assets/icon.svg
-          test -f plugins/gongkao-coach/assets/logo.svg
-          test -f local-test/build-offline-package.cmd
-          cmp plugin-package/gongkao-coach/skills/gongkao-onboarding/SKILL.md plugins/gongkao-coach/skills/gongkao-onboarding/SKILL.md
-          cmp plugin-package/gongkao-coach/skills/gongkao-coach/SKILL.md plugins/gongkao-coach/skills/gongkao-coach/SKILL.md
+          python scripts/sync_local_plugin.py
+          git diff --exit-code -- plugins/gongkao-coach/references plugins/gongkao-coach/PRIVACY.md plugin-package/gongkao-coach/skills
+      - name: Package contracts and JavaScript syntax
+        run: node scripts/check_local_source.mjs

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "gongkao-coach",
-  "version": "0.9.0",
-  "description": "Long-term adaptive practice coach for Chinese civil-service and public-institution exams.",
+  "version": "1.0.0",
+  "description": "Local-first AI exam coach with shared browser/chat progress, isolated learner databases and durable adaptive training.",
   "homepage": "https://github.com/yclty/gongkao-practice.skill",
   "repository": "https://github.com/yclty/gongkao-practice.skill",
   "license": "AGPL-3.0",
@@ -17,8 +17,8 @@
     "com.openai": {
       "interface": {
         "displayName": "考公上岸 Coach",
-        "shortDescription": "个性化考公刷题与复习",
-        "longDescription": "根据当前 Project 的学习路线、当前时段、到期复习和能力画像主动推荐训练方式。非工作时段可选择章节深练、20题套题或整套真题；碎片时间自动缩短。支持真题库状态诊断、可暂停答题、错因修正和间隔复习。",
+        "shortDescription": "本地保存进度，多人各自持续备考",
+        "longDescription": "每个人使用自己的本地学习档案，网页与 AI 聊天共享自动保存的进度。支持诊断、专项、基础过关、错因复习和严格整卷模拟，换聊天与重启后继续。",
         "developerName": "__DEVELOPER_NAME__",
         "capabilities": [
           "场景化学习路线",
@@ -32,10 +32,9 @@
         "privacyPolicyURL": "https://github.com/yclty/gongkao-practice.skill/blob/main/PRIVACY.md",
         "termsOfServiceURL": "https://github.com/yclty/gongkao-practice.skill/blob/main/TERMS.md",
         "defaultPrompt": [
+          "初始化我的考公系统",
           "开始练习",
-          "按我的学习路线开始",
-          "做一套20题",
-          "做一套真题试卷"
+          "按我的学习路线开始"
         ],
         "brandColor": "#2F6B4F",
         "brandColorDark": "#8FD3B0",

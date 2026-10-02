@@ -3,6 +3,7 @@ export const ERROR_CODES = ["K", "M", "U", "R", "C", "D", "T", "G", "S"];
 export function publicQuestion(question, index, total) {
   return {
     question_id: question.question_id,
+    question_type: question.question_type ?? "SINGLE",
     module: question.module,
     subtype: question.subtype ?? null,
     source_type: question.source_type ?? "practice",
@@ -35,8 +36,12 @@ export function speedStatus(question, elapsedSeconds) {
 }
 
 export function evaluateQuestion(question, answer, elapsedSeconds) {
-  const normalized = String(answer ?? "").trim().toUpperCase();
-  const correct = normalized === question.correct_answer;
+  const normalize = (value) => [...new Set((Array.isArray(value) ? value : String(value ?? "").split(",")).map((v) => String(v).trim().toUpperCase()).filter(Boolean))].sort().join(",");
+  const normalized = normalize(answer);
+  const labels = new Set(question.options.map((option) => option.label));
+  if (normalized && normalized.split(",").some((label) => !labels.has(label))) throw Object.assign(new Error("请选择题目中的有效选项"),{code:"INVALID_INPUT"});
+  if (question.question_type !== "MULTIPLE" && normalized.includes(",")) throw Object.assign(new Error("该题只能选择一个选项"),{code:"INVALID_INPUT"});
+  const correct = normalized === normalize(question.correct_answer);
   const speed = speedStatus(question, elapsedSeconds);
   return {
     answer: normalized,
