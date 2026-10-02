@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "gongkao-coach",
+  "version": "0.8.1",
+  "description": "Start-first adaptive coach for Chinese civil-service and public-institution exam practice.",
+  "homepage": "https://github.com/yclty/gongkao-practice.skill",
+  "repository": "https://github.com/yclty/gongkao-practice.skill",
+  "license": "AGPL-3.0",
+  "keywords": ["gongkao", "study", "quiz", "spaced-repetition"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "考公上岸 Coach",
+        "shortDescription": "打开就刷，随时暂停的个性化考公教练",
+        "longDescription": "默认直接开始训练，自动优先继续上次、到期复习、基线诊断和薄弱项。时间模式可选，个人状态按 ChatGPT Project 隔离。",
+        "defaultPrompt": [
+          "初始化我的考公系统",
+          "开始练习",
+          "继续上次",
+          "专练资料分析"
+        ],
+        "brandColor": "#2F6B4F",
+        "brandColorDark": "#8FD3B0",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/logo.svg"
+      },
+      "onboardingSkill": "./skills/gongkao-onboarding/SKILL.md"
+    }
+  }
+}
