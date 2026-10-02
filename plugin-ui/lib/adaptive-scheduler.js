@@ -409,7 +409,9 @@ export function planAdaptiveTraining(state, input = {}, now = new Date()) {
     open_ended: !timeboxed,
     available_minutes: timeboxed ? Number(input.available_minutes) : null,
     planned_questions: totalPlanned,
-    atomic_batch_questions: count,
+    atomic_batch_questions: timeboxed
+      ? Math.min(DEFAULT_ATOMIC_BATCH, count)
+      : count,
     target,
     due_review_count: due.length,
     question_request: requestForTarget(state, target, count),
