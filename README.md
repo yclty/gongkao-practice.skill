@@ -197,6 +197,30 @@ MCP 的 reducer 是无状态的：它只计算新 state，不保存长期用户�
 新用户只需要先知道“开始练习 / 暂停 / 继续上次 / 专项训练”四件事。
 
 
+## v0.8.1：本地 Plugin 试用包
+
+不公开发布也可以先做本地验证。
+
+仓库新增：
+
+- `.agents/plugins/marketplace.json`
+- `plugins/gongkao-coach/`
+- `local-test/install-personal-plugin.cmd`
+- `local-test/prepare-local-runtime.cmd`
+- `local-test/start-mcp.cmd`
+- `local-test/open-mcp-inspector.cmd`
+- `LOCAL_TEST_START_HERE.md`
+
+当前推荐分两层测试：
+
+1. **ChatGPT Desktop 本地 Plugin**：验证 Skill、初始化、Project 隔离、Start-first、暂停/继续语义。
+2. **MCP Inspector**：验证本地 MCP、QuestionProvider、state reducer 和 UI resource。
+
+本地 marketplace 本身不会自动把 `localhost` MCP 连接进 ChatGPT，因此 v0.8.1 不把“Skill 安装成功”和“点击答题卡已接通”混为一件事。
+
+详见 [LOCAL_TEST_START_HERE.md](LOCAL_TEST_START_HERE.md)。
+
+
 ## 项目特点
 
 - 覆盖国考、省考、事业单位等常见场景
