@@ -221,6 +221,29 @@ MCP 的 reducer 是无状态的：它只计算新 state，不保存长期用户�
 详见 [LOCAL_TEST_START_HERE.md](LOCAL_TEST_START_HERE.md)。
 
 
+## v0.9：场景化学习路线与真题整卷
+
+v0.8.1 实测暴露了两个问题：
+
+1. “开始练习”入口太被动，没有根据整块时间 / 碎片时间主动给学习方式。
+2. 本地 Plugin 只安装了 Skill；即使仓库里有题库导入代码，ChatGPT 本身也看不到未连接的 localhost QuestionProvider，因此会把“个人画像样本少”和“真题运行时没接入”混在一起。
+
+v0.9 修正为：
+
+- 每个 Project 保存自己的 `study_route` 和场景偏好
+- 晚间/周末主动给“路线 / 章节 / 20题套题 / 真题整卷 / 碎片刷题”
+- 工作/碎片场景优先“3题快刷 / 到期复习 / 路线继续”
+- 新增 `get_question_bank_status`
+- 新增 `configure_project_study_route`
+- 新增 `start_paper_from_bank`
+- canonical 题库保留 paper_id / paper_position，可真正按整卷启动
+- 本地准备脚本找不到 `yclty/gongkao` 时自动拉取并生成 canonical 题库
+- 新增带题库数据的离线 ZIP 构建脚本
+
+重要：**本地 Skill 安装 ≠ ChatGPT 已连接本地 MCP。**  
+Skill-only 模式应该明确提示“真题运行时未接入”，而不是说“缺乏数据”。
+
+
 ## 项目特点
 
 - 覆盖国考、省考、事业单位等常见场景
