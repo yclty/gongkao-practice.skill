@@ -74,16 +74,24 @@ test("unfinished session is resumed before making a new plan", () => {
   assert.equal(plan.atomic_batch_questions, 2);
 });
 
-test("launcher gives a single obvious primary action", () => {
-  const first = launcherForState(state());
-  assert.equal(first.primary_action.label, "直接开始");
-  assert.equal(first.secondary_actions.length, 3);
+test("launcher gives context-aware choices and resumes unfinished work", () => {
+  const first = launcherForState(
+    state(),
+    { study_context: "neutral" },
+    { configured: true, stats: { interactive_supported: 100, papers: 3 } },
+    "2026-10-02T12:00:00Z"
+  );
+  assert.equal(first.primary_action.label, "系统推荐");
+  assert.equal(first.actions.some((item) => item.mode === "set"), true);
 
   const returning = launcherForState(
     state({
       recent_attempts: [{ question_id: "q1" }],
       unfinished_session: { project_state_id: "ps_test" },
-    })
+    }),
+    { study_context: "deep" },
+    { configured: true, stats: { interactive_supported: 100, papers: 3 } },
+    "2026-10-02T12:00:00Z"
   );
   assert.equal(returning.primary_action.label, "继续上次");
 });
