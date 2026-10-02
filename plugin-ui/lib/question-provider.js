@@ -2,8 +2,37 @@ import { readFileSync, statSync } from "node:fs";
 
 let cache = null;
 
+const MODULE_ALIASES = {
+  言语: ["言语理解与表达"],
+  判断: ["判断推理"],
+  数量: ["数量关系"],
+  资料: ["资料分析"],
+  常识: ["常识判断"],
+  政治: ["政治理论"],
+  公基: ["公共基础知识"],
+  职测: ["职业能力倾向测验"],
+};
+
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizedCandidates(value) {
+  const text = normalizeText(value);
+  if (!text) return [];
+  return [text, ...(MODULE_ALIASES[text] ?? [])];
+}
+
+function semanticEqual(value, target) {
+  if (!target) return true;
+  const left = normalizeText(value);
+  const targets = normalizedCandidates(target);
+  return targets.some(
+    (candidate) =>
+      left === candidate ||
+      left.includes(candidate) ||
+      candidate.includes(left)
+  );
 }
 
 function loadRawBank(path) {
@@ -19,12 +48,25 @@ function loadRawBank(path) {
       try {
         return JSON.parse(line);
       } catch (error) {
-        throw new Error(`Invalid JSONL at line ${index + 1}: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Invalid JSONL at line ${index + 1}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     });
 
   cache = { path, mtimeMs: stat.mtimeMs, items };
   return items;
+}
+
+function paperGroups(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const paperId = item.paper_id || null;
+    if (!paperId) continue;
+    if (!groups.has(paperId)) groups.set(paperId, []);
+    groups.get(paperId).push(item);
+  }
+  return groups;
 }
 
 export function bankStats(items) {
@@ -42,12 +84,63 @@ export function bankStats(items) {
     if (item.year) years.set(String(item.year), (years.get(String(item.year)) ?? 0) + 1);
   }
 
+  const groups = paperGroups(items);
+  let completeInteractivePapers = 0;
+  for (const questions of groups.values()) {
+    if (questions.length && questions.every((item) => item.interactive_supported)) {
+      completeInteractivePapers += 1;
+    }
+  }
+
   return {
     total: items.length,
     interactive_supported: interactive,
+    papers: groups.size,
+    complete_interactive_papers: completeInteractivePapers,
     modules: Object.fromEntries([...modules.entries()].sort((a, b) => b[1] - a[1])),
     subtypes: Object.fromEntries([...subtypes.entries()].sort((a, b) => b[1] - a[1])),
     years: Object.fromEntries([...years.entries()].sort((a, b) => b[0].localeCompare(a[0]))),
+  };
+}
+
+export function questionBankCatalog(items, options = {}) {
+  const limit = Math.max(1, Math.min(200, Number(options.limit ?? 50)));
+  const stats = bankStats(items);
+
+  const papers = [];
+  for (const [paperId, questions] of paperGroups(items).entries()) {
+    const sorted = [...questions].sort(
+      (a, b) => Number(a.paper_position ?? 0) - Number(b.paper_position ?? 0)
+    );
+    const first = sorted[0] ?? {};
+    const interactiveCount = sorted.filter((item) => item.interactive_supported).length;
+    papers.push({
+      paper_id: paperId,
+      title: first.paper_title || first.source_exam || paperId,
+      year: first.year ?? null,
+      province: first.province ?? null,
+      exam_type: first.exam_type ?? null,
+      total_questions: sorted.length,
+      interactive_questions: interactiveCount,
+      complete_interactive: interactiveCount === sorted.length && sorted.length > 0,
+    });
+  }
+
+  papers.sort((a, b) => {
+    const yearDiff = Number(b.year ?? 0) - Number(a.year ?? 0);
+    if (yearDiff !== 0) return yearDiff;
+    return b.interactive_questions - a.interactive_questions;
+  });
+
+  return {
+    stats,
+    modules: Object.entries(stats.modules)
+      .map(([module, count]) => ({ module, count }))
+      .slice(0, limit),
+    subtypes: Object.entries(stats.subtypes)
+      .map(([subtype, count]) => ({ subtype, count }))
+      .slice(0, limit),
+    papers: papers.slice(0, limit),
   };
 }
 
@@ -58,9 +151,7 @@ export function loadQuestionBank(path) {
   return loadRawBank(path);
 }
 
-function matchesCommon(item, query) {
-  if (!item.interactive_supported) return false;
-
+function matchesMetadata(item, query) {
   const sourceTypes = query.source_types?.length
     ? new Set(query.source_types)
     : new Set(["official_real", "platform_import", "practice"]);
@@ -74,9 +165,14 @@ function matchesCommon(item, query) {
   return true;
 }
 
+function matchesCommon(item, query) {
+  if (!item.interactive_supported) return false;
+  return matchesMetadata(item, query);
+}
+
 function targetMatches(item, target) {
-  if (target.module && item.module !== target.module) return false;
-  if (target.subtype && item.subtype !== target.subtype) return false;
+  if (target.module && !semanticEqual(item.module, target.module)) return false;
+  if (target.subtype && !semanticEqual(item.subtype, target.subtype)) return false;
   return true;
 }
 
@@ -117,7 +213,9 @@ function rankCandidates(items) {
 export function toQuizQuestion(item) {
   const answer = normalizeText(item.correct_answer);
   if (!/^[A-D]$/.test(answer)) {
-    throw new Error(`Question ${item.question_id} is not compatible with single-choice UI`);
+    throw new Error(
+      `Question ${item.question_id} is not compatible with single-choice UI`
+    );
   }
 
   return {
@@ -134,7 +232,9 @@ export function toQuizQuestion(item) {
         }))
       : [],
     correct_answer: answer,
-    target_seconds: Number.isFinite(item.target_seconds) ? item.target_seconds : undefined,
+    target_seconds: Number.isFinite(item.target_seconds)
+      ? item.target_seconds
+      : undefined,
     fastest_method: normalizeText(item.fastest_method) || undefined,
     explanation_short: normalizeText(item.explanation_short) || undefined,
     explanation_full: normalizeText(item.analysis) || undefined,
@@ -145,6 +245,10 @@ export function toQuizQuestion(item) {
       province: item.province || null,
       exam_type: item.exam_type || null,
       source_ref: item.source_ref || null,
+      paper_id: item.paper_id || null,
+      paper_title: item.paper_title || null,
+      paper_position: item.paper_position ?? null,
+      paper_total: item.paper_total ?? null,
     },
   };
 }
@@ -163,12 +267,13 @@ export function selectQuestions(items, query = {}) {
     : [{ count: query.count ?? 5 }];
 
   for (const target of targets) {
-    const count = Math.max(0, Math.min(20, Number(target.count ?? 0)));
+    const count = Math.max(0, Math.min(50, Number(target.count ?? 0)));
     if (!count) continue;
 
     const exact = rankCandidates(
       common.filter(
-        (item) => !selectedIds.has(item.question_id) && targetMatches(item, target)
+        (item) =>
+          !selectedIds.has(item.question_id) && targetMatches(item, target)
       )
     );
 
@@ -183,7 +288,7 @@ export function selectQuestions(items, query = {}) {
         common.filter(
           (item) =>
             !selectedIds.has(item.question_id) &&
-            item.module === target.module
+            semanticEqual(item.module, target.module)
         )
       );
       for (const item of fallback.slice(0, missing)) {
@@ -194,7 +299,7 @@ export function selectQuestions(items, query = {}) {
   }
 
   const requestedCount = query.count
-    ? Math.max(1, Math.min(20, Number(query.count)))
+    ? Math.max(1, Math.min(50, Number(query.count)))
     : targets.reduce((sum, target) => sum + Number(target.count ?? 0), 0);
 
   if (selected.length < requestedCount) {
@@ -208,4 +313,55 @@ export function selectQuestions(items, query = {}) {
   }
 
   return selected.slice(0, requestedCount).map(toQuizQuestion);
+}
+
+export function selectPaper(items, query = {}) {
+  const requireComplete = query.require_complete !== false;
+  const requestedPaperId = query.paper_id ?? null;
+  const groups = [];
+
+  for (const [paperId, questions] of paperGroups(items).entries()) {
+    if (requestedPaperId && paperId !== requestedPaperId) continue;
+
+    const metadataMatched = questions.filter((item) => matchesMetadata(item, query));
+    if (!metadataMatched.length) continue;
+
+    const interactive = metadataMatched.filter((item) => item.interactive_supported);
+    const complete =
+      interactive.length === metadataMatched.length && metadataMatched.length > 0;
+
+    if (requireComplete && !complete) continue;
+    if (!interactive.length) continue;
+
+    const first = metadataMatched[0] ?? {};
+    groups.push({
+      paper: {
+        paper_id: paperId,
+        title: first.paper_title || first.source_exam || paperId,
+        year: first.year ?? null,
+        province: first.province ?? null,
+        exam_type: first.exam_type ?? null,
+        total_questions: metadataMatched.length,
+        interactive_questions: interactive.length,
+        complete_interactive: complete,
+      },
+      items: interactive.sort(
+        (a, b) => Number(a.paper_position ?? 0) - Number(b.paper_position ?? 0)
+      ),
+    });
+  }
+
+  groups.sort((a, b) => {
+    const yearDiff = Number(b.paper.year ?? 0) - Number(a.paper.year ?? 0);
+    if (yearDiff !== 0) return yearDiff;
+    return b.paper.interactive_questions - a.paper.interactive_questions;
+  });
+
+  const selected = groups[0];
+  if (!selected) return null;
+
+  return {
+    paper: selected.paper,
+    questions: selected.items.map(toQuizQuestion),
+  };
 }
