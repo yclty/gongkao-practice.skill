@@ -122,6 +122,45 @@ MCP Server 只保存短期 session；长期个人状态仍只保存在用户自�
 
 新用户引导见 `references/start-experience.md`。
 
+## v0.9 场景化学习路线
+
+本节优先于旧版“直接开始/固定3题”的默认说明。
+
+用户说“开始练习”时：
+
+1. 当前 Project 有 unfinished session → 优先“继续上次”。
+2. 否则根据本地时间/用户描述判断场景：
+   - 晚间、周末、非工作时间：展示“继续路线 / 集中章节 / 20题套题 / 真题整卷 / 碎片刷题”。
+   - 工作或碎片时间：优先“3题快刷 / 到期复习 / 路线继续”。
+   - 无法判断：展示“系统推荐 / 路线 / 章节 / 套题 / 碎片”。
+3. 用户明确说“直接开始”时，跳过选择，按系统推荐执行。
+
+训练模式：
+- quick：3题
+- route：当前学习路线步骤，默认10题
+- chapter：指定章节/子题型，默认10题
+- set：跨模块20题
+- paper：完整导入真题试卷
+- review：到期复习
+
+学习路线保存在当前 Project 的 `study_route` 中，可通过 `configure_project_study_route` 更新。
+
+题库状态必须与个人画像状态分开：
+
+- 个人样本少 ≠ 真题库没数据
+- `QUESTION_BANK_NOT_CONFIGURED` 要明确说“真题运行时未接入”
+- `QUESTION_BANK_READY` 可展示可作答题数和试卷数
+- 题库已加载但筛选为空时说明是当前过滤条件没有匹配
+
+可用时优先调用：
+- `get_question_bank_status`
+- `plan_training_session`
+- `configure_project_study_route`
+- `start_quiz_from_bank`
+- `start_paper_from_bank`
+
+完整体验见 `references/study-route.md`。
+
 ## 默认训练闭环
 
 `读取宿主状态 → 选择训练目标 → 选真题/生成变式题 → 用户作答 → 诊断错因 → 输出状态增量 → 宿主保存`
