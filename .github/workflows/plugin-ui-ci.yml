@@ -51,7 +51,7 @@ jobs:
           grep -q 'connectDomains: \[\]' server.js
           grep -q 'resourceDomains: \[\]' server.js
       - name: Canonical question importer fixture
-        working-directory: ..
+        working-directory: ${{ github.workspace }}
         run: |
           python scripts/import_gongkao_repository.py \
             --source tests/fixtures/gongkao-snapshot \
