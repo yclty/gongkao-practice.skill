@@ -85,6 +85,22 @@ MCP Server 只保存短期 session；长期个人状态仍只保存在用户自�
 
 题库审计与字段映射见 `references/gongkao-question-bank-audit.md`。
 
+## v0.7 Project-scoped Personal State
+
+个人学习状态以当前 ChatGPT Project 为隔离边界。
+
+- 每个 Project 初始化随机 `project_state_id`
+- 同一账号的不同 Project 不自动共享状态
+- Quiz session 携带 `project_state_id`
+- summary 回写前必须校验 Project ID
+- `initialize_project_learning_state` / `apply_project_learning_events` 可用时优先使用
+- reducer 只计算状态，不在 MCP 服务端保存长期个人数据
+- 不允许用用户名、邮箱、账号作为学习状态主键
+
+完整协议见：
+- `references/project-state-contract.md`
+- `references/project-scoped-personal-state.md`
+
 ## 默认训练闭环
 
 `读取宿主状态 → 选择训练目标 → 选真题/生成变式题 → 用户作答 → 诊断错因 → 输出状态增量 → 宿主保存`
