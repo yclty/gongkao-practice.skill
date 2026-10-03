@@ -7,7 +7,7 @@ const root=resolve(dirname(fileURLToPath(import.meta.url)),"..");
 const plugin=resolve(root,"plugins/gongkao-coach");
 const json=(p)=>JSON.parse(readFileSync(p,"utf8"));
 const manifest=json(resolve(plugin,"plugin.json")),mcp=json(resolve(plugin,"mcp.json"));
-assert.equal(manifest.name,"gongkao-coach");assert.equal(manifest.version,"1.0.0");
+assert.equal(manifest.name,"gongkao-coach");assert.equal(manifest.version,"1.0.2");
 const ui=manifest.extensions["com.openai"].interface;
 assert.ok([...ui.shortDescription].length<=30);assert.ok(ui.defaultPrompt.length<=3);
 assert.equal(mcp.mcpServers["gongkao-local"].type,"stdio");

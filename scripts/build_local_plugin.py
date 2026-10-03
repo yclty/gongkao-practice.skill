@@ -54,6 +54,9 @@ def main():
             raise ValueError(f"Dependency does not match lockfile: {path}; run npm ci")
     bank = [json.loads(line) for line in args.bank.read_text(encoding="utf-8").split("\n") if line.strip()]
     assets = set(re.findall(r"/bank-assets/([a-f0-9]{64})", args.bank.read_text(encoding="utf-8")))
+    subjective_bank = args.bank.parent / "sydw-subjective-bank.jsonl"
+    if subjective_bank.is_file():
+        assets.update(re.findall(r"/bank-assets/([a-f0-9]{64})", subjective_bank.read_text(encoding="utf-8")))
     for name in assets:
         if not (args.bank.parent / "assets" / name).is_file():
             raise ValueError(f"Offline image missing: {name}")
@@ -78,6 +81,14 @@ def main():
     (plugin / "bank/assets").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(args.bank, plugin / "bank/questions.jsonl")
     shutil.copyfile(args.bank.with_suffix(".meta.json"), plugin / "bank/metadata.json")
+    if subjective_bank.is_file():
+        shutil.copyfile(subjective_bank, plugin / "bank/sydw-subjective-bank.jsonl")
+        for name in ("综应A类-2024.md", "综应C类-2024.md"):
+            material = args.bank.parent / "sydw-materials" / name
+            if material.is_file():
+                target = plugin / "bank/materials" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(material, target)
     for name in sorted(assets):
         shutil.copyfile(args.bank.parent / "assets" / name, plugin / "bank/assets" / name)
     shutil.copyfile(ROOT / "LICENSE", plugin / "LICENSE")

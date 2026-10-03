@@ -1,12 +1,14 @@
 # gongkao-practice.skill
 
-已实现本地 AI 考公 Plugin 1.0.0：**同一个公共包供多人安装，各自保存个人数据；本地网页与桌面 AI 聊天共享进度，无需云服务器。**
+已实现本地 AI 考公 Plugin 1.0.2：**同一个公共包供多人安装，各自保存个人数据；本地网页与桌面 AI 聊天共享进度，无需云服务器。**
+
+1.0.2 补入 2024-03-30 事业单位职测 A/C 回忆版 200 个题位，其中 199 题可交互、1 道争议题隔离。A 卷可完整训练，C 卷用于专项；新增综应 A/C 两套材料（17 个作答任务）供人工讲评。C 类参考答案按第二来源逐题解析核对，保留原答案、纠正记录及来源。此批第三方回忆版不属于官方题。原有公共题目与个人档案保留。
 
 以 Skill 0.9 的教学规则、调度与题库处理为基础，复用 gongkao 的题库快照和基础训练原则，增加独立 SQLite、自动保存、持久会话、stdio MCP 和完整 Windows 交付。
 
 ## 使用
 
-1. 下载或复制 dist/ 中的 Windows x64 ZIP，完整解压，双击 install.cmd。
+1. 从 [1.0.2 发布页](https://github.com/yclty/gongkao-practice.skill/releases/tag/v1.0.2) 下载 Windows x64 ZIP，完整解压，双击 install.cmd。
 2. 网页创建自己的学习档案。以后通过桌面 Gongkao Coach 打开，点击“继续上次”。
 3. Codex 新聊天启用“考公上岸 Coach”，从网页“档案与备份”复制 AI 聊天入口并粘贴。说“开始练习”“继续上次”“专练资料分析”。
 4. 给别人发送公共 ZIP；换机时单独导出个人 .gkbackup。
@@ -32,6 +34,7 @@
 ## 验证与设计
 
 - [验证报告](docs/local-plugin-verification.md)
+- [1.0.2 补题与发布验证](docs/sydw-1.0.2-verification.md)
 - [目标设计与验收标准](docs/local-plugin-design.md)
 - [运行时契约](references/local-runtime.md)
 - [AI 教学闭环](references/pedagogy-protocol.md)
@@ -56,7 +59,8 @@ node scripts/check_local_source.mjs
 先导入 gongkao 快照和离线图片，再构建：
 
 ```powershell
-python -X utf8 scripts/import_gongkao_repository.py --source <gongkao快照目录> --output local-data/gongkao-question-bank.jsonl --download-assets --node <Node24路径> --source-commit <源commit>
+python -X utf8 scripts/import_gongkao_repository.py --source <gongkao快照目录> --output local-data/gongkao-base.jsonl --download-assets --node <Node24路径> --source-commit 71e9dd7e7bd2689014c7a8af18fdb62556a860c3
+python -X utf8 scripts/import_sydw_supplement.py --base local-data/gongkao-base.jsonl --output local-data/gongkao-question-bank.jsonl
 python -X utf8 scripts/build_local_plugin.py --node <Node24路径> --node-license <对应Node版本LICENSE>
 node scripts/verify_local_package.mjs dist/<完整包>.zip <codex.exe路径>
 ```
