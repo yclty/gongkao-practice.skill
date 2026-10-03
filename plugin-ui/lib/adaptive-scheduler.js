@@ -414,7 +414,7 @@ export function planAdaptiveTraining(state, input = {}, now = new Date()) {
       : count,
     target,
     due_review_count: due.length,
-    question_request: requestForTarget(state, target, count),
+    question_request: requestForTarget(state, target, Math.min(DEFAULT_ATOMIC_BATCH, count)),
     user_message: timeboxed
       ? `按你现在的时间先安排 ${totalPlanned} 题，中途仍然可以随时停。`
       : target?.reason

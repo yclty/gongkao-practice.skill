@@ -92,14 +92,27 @@ test("selectQuestions prefers exact subtype and excludes requested ids", () => {
     targets: [{ module: "资料分析", subtype: "两期比重", count: 1 }],
     exclude_question_ids: ["q1"],
   });
-  assert.equal(excluded[0].question_id, "q2");
+  assert.equal(excluded.length, 0, "explicit focus must not silently use another subtype");
+  const relaxed = selectQuestions(items, { count:1, targets:[{module:"资料分析",subtype:"两期比重",count:1}],exclude_question_ids:["q1"],allow_relaxation:true });
+  assert.equal(relaxed[0].question_id,"q2");
 });
 
-test("toQuizQuestion preserves provenance but only supports one label answer", () => {
+test("toQuizQuestion preserves provenance and rejects incomplete options", () => {
   const q = toQuizQuestion(items[0]);
   assert.equal(q.correct_answer, "B");
   assert.equal(q.provenance.source_provider, "saduck");
   assert.throws(() => toQuizQuestion(items[2]));
+});
+
+test("paper memberships retain two complete papers and reject duplicate question IDs",()=>{
+  const shared=items.slice(0,2).map((q)=>({...q,paper_memberships:[{paper_id:"one",paper_total:2,paper_position:q.paper_position},{paper_id:"two",paper_total:2,paper_position:q.paper_position}]}));
+  assert.equal(bankStats(shared).complete_interactive_papers,2);assert.equal(selectPaper(shared,{paper_id:"two"}).questions.length,2);
+  const duplicate=[{...items[0]},{...items[0],paper_position:2}];assert.equal(bankStats(duplicate).complete_interactive_papers,0);assert.equal(selectPaper(duplicate),null);
+});
+test("valid multiple-choice and AI explanations survive conversion",()=>{
+  const q=toQuizQuestion({...items[0],question_type:"MULTIPLE",correct_answer:"A,C",explanation_full:"AI 验算后的解析"});
+  assert.equal(q.correct_answer,"A,C");assert.equal(q.explanation_full,"AI 验算后的解析");
+  assert.throws(()=>toQuizQuestion({...items[0],options:[{label:"A",text:"1"},{label:"A",text:"2"}]}),{code:"INVALID_INPUT"});
 });
 
 

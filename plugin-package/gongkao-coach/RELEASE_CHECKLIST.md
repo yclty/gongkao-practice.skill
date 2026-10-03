@@ -1,51 +1,20 @@
-# Public Plugin Release Checklist
+# 本地 Plugin 验证检查
 
-## Product
+本版交付本地 Windows x64 ZIP。每个正式版本都必须重新记录包哈希与实际结果；下面的工程验证不代替尚未完成的真实宿主验收。
 
-- [ ] Display name and descriptions match actual functionality
-- [ ] Starter prompts are realistic
-- [ ] AI-generated questions are never presented as real exam questions
-- [ ] No claim guarantees admission, rank, or score
+- [x] 51 项运行时测试与 4 项题库导入测试。
+- [x] 根 Skill 与两个 Plugin Skill 的结构、相对引用和同步检查。
+- [x] 独立数据目录、跨档案归属检查、正式作答事务和重复请求去重。
+- [x] 服务与事务强制终止、草稿恢复、固定模拟截止时间。
+- [x] 白名单公共包包含便携运行时、锁定依赖、来源、许可证和文件校验值。
+- [x] 中文 / 空格路径、Windows PowerShell 5.1、无全局 Node/npm 的 ZIP 安装验证。
+- [x] 隔离 Codex 配置中的原生安装、发现、缓存拷贝和便携 MCP 启动。
+- [x] 网页实际练习、暂停、错因确认、切换档案、图像显示和报告。
+- [x] 网页个人备份下载和导入，新档案恢复不覆盖原档案。
+- [x] 相同版本重装与 0.9 JSON 导入。
+- [ ] 真实 Codex Desktop 新聊天由模型调用工具、继续旧训练的教学体验验收。
+- [ ] 两台物理电脑与全新 Windows 系统上的安装和持续使用验收。
+- [ ] 新 schema 升级、迁移失败回滚、宿主重装与缓存清理的完整矩阵。
+- [ ] 多周学习试用与训练效果评估。
 
-## Publisher
-
-- [ ] OpenAI Platform developer/business identity is verified
-- [ ] DEVELOPER_NAME exactly matches the verified publisher identity
-- [ ] Website, support, privacy, and terms URLs are public and consistent with publisher identity
-
-## MCP
-
-- [ ] Production MCP URL is HTTPS and publicly reachable
-- [ ] Domain challenge is configured through OPENAI_APPS_CHALLENGE
-- [ ] /.well-known/openai-apps-challenge returns only the exact verification token
-- [ ] Scan Tools succeeds
-- [ ] All tools expose readOnlyHint, openWorldHint, destructiveHint
-- [ ] Tool descriptions and schemas match real behavior
-- [ ] No unnecessary PII, auth secrets, debug payloads, or logs are returned
-- [ ] UI CSP matches actual domains
-
-## UI
-
-- [ ] Choice card renders
-- [ ] Correct answer is not visible before submission
-- [ ] Timer records active question time
-- [ ] Error-code correction works
-- [ ] Final session summary renders
-- [ ] Text fallback remains usable when UI is unavailable
-
-## Review
-
-- [ ] Five positive review cases pass
-- [ ] Three negative review cases pass
-- [ ] Demo walkthrough recording is ready if requested
-- [ ] Release notes are prepared
-- [ ] Availability countries/regions are selected intentionally
-
-## Package
-
-- [ ] Run build-package.mjs with the production MCP URL
-- [ ] dist/gongkao-coach/plugin.json has no placeholders
-- [ ] dist/gongkao-coach/mcp.json points to production
-- [ ] skills/ contains onboarding and coach skills
-- [ ] assets/logo.svg and assets/icon.svg are present
-- [ ] ZIP contains exactly one plugin root
+可供本地试用的工程包已经生成。当前证据与剩余范围见 [验证报告](../../docs/local-plugin-verification.md)；不承诺录用结果。

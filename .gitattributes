@@ -1,0 +1,4 @@
+# Public input hashes must survive Windows/Linux checkouts byte for byte.
+/data/sydw-20240330/** -text
+# Raw captured HTML contains original whitespace; review via pinned hashes.
+/data/sydw-20240330/sources/** -diff

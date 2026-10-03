@@ -1,19 +1,20 @@
 {
   "name": "gongkao-quiz-mcp",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Context-aware study routes, question-bank status, real-paper practice, Project state, and quiz UI.",
+  "description": "Local-first multi-learner AI exam coach with SQLite, stdio MCP, offline bank, browser practice and backup.",
   "scripts": {
-    "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "start": "node ensure-service.js --open",
+    "mcp": "node mcp-stdio.js",
+    "test": "node run-tests.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24.14"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.0.1",
-    "@modelcontextprotocol/sdk": "^1.20.2",
-    "zod": "^3.25.76"
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "zod": "3.25.76"
   }
 }

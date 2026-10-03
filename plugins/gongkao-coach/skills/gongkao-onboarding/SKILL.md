@@ -1,84 +1,25 @@
 ---
 name: gongkao-onboarding
-description: Initialize a new learner's long-term gongkao study system after the user installs this plugin or asks to set up their exam preparation.
+description: 初始化或绑定本地公考学习档案，帮助新学习者开始备考，并让已有学习者换聊天后继续。
 ---
 
-# Goal
+# 初始化或继续
 
-Initialize a long-term adaptive study workflow for one learner.
+已有 binding_id 时调用 get_learning_context 并继续。不得因为打开新聊天而重复初始化。
 
-## Rules
+没有绑定时调用 open_learning_ui，提供入口，让学习者选择已有档案或新建自己的档案，再复制 AI 聊天入口。不要猜测个人身份，不自动绑定其他人的进度。
 
-1. Treat the current ChatGPT Project as one independent long-term learning state. The same person may intentionally use multiple Projects for different exam goals; never merge them automatically.
-2. Do not require GitHub, coding knowledge, or manual prompt installation.
-3. Ask only for missing information that materially changes the initial plan.
-4. If the user does not provide enough data, use safe defaults:
-   - preparation horizon: 1–2 years
-   - weekday study time: 30 minutes
-   - weekend study time: 60 minutes
-   - ability profile: unknown / pending baseline
-5. Never invent current accuracy, weaknesses, or historical performance.
-6. Initialize a random `project_state_id` for this Project. Do not derive it from the user's name, account, email, or device.
-7. If `initialize_project_learning_state` is available, use it and persist the returned state in the current Project/host context.
-8. Do not automatically start a quiz after initialization unless the user asks.
+用户明确要求新建时，调用 initialize_project_learning_state：
+- name 使用用户提供的档案名称；未提供时可用“我的备考”。
+- exam_type、province 使用明确目标；考试未知时暂用省考并说明这个默认值，之后可建立新目标。
+- idempotency_key 为本次初始化生成；重试必须沿用。
+- 学习者 ID、目标 ID 和 binding_id 全部使用工具返回值，不能自造。
+- 同一学习者新考试目标可以传 learner_id；未明确身份时不传。
 
-## Initialize
+返回简短的目标设置、真实库存、画像待诊断说明及下一步入口。只解释“开始练习、暂停、继续上次、专项训练”。用户要求开始时立即计划并开启 3 题，不强制设置学习时长。
 
-Capture when available:
-- target exams
-- province / jurisdiction
-- preparation horizon
-- weekday and weekend study time
-- whether the learner already practices
-- current question sources or materials
-- whether essay / 申论 preparation is included
-- meaningful constraints
+个人作答自动保存到本机；同一档案的网站和 AI 聊天共享记录。另一台电脑通过个人备份恢复；不要让用户把状态 JSON 反复贴回聊天。
 
-Return:
-- project_state_id / Project state initialized
-- a compact configuration summary
-- the default Project study route
-- current preparation phase
-- known vs unknown profile fields
-- question-bank status when the tool exists
-- a short first-week direction
-- a context-aware launcher:
-  - deep/non-work: continue route / chapter / set / real paper / quick
-  - fragmented: 3-question quick / due review / route continuation
-  - unknown context: system recommendation / route / chapter / set / quick
+旧 v0.9 Project JSON 必须由用户明确选择导入。网页导入保留历史快照，不把无法核实的旧累计次数伪装成新正式作答。
 
-After initialization, teach only the minimum:
-- 开始练习
-- 暂停
-- 继续上次
-- 专项训练
-
-Do not make the learner understand Scheduler, SRS, Mastery, or Priority Score before they can start.
-
-
-# Project isolation
-
-Never use another Project's:
-- ability profile
-- recent question IDs
-- error history
-- due reviews
-- unfinished session
-- reports
-
-When importing a state from another Project, treat it as an explicit migration and create a new project_state_id unless the user specifically requests continuation of the same exported state.
-
-
-# Route customization
-
-Initialization should create a default route, but do not force the learner to accept it forever.
-
-Tell the learner they can later say:
-- 制定我的学习路线
-- 先资料分析，再判断推理
-- 把数量关系放后面
-- 晚上按路线集中学，工作时间碎片刷
-
-Do not require work-hour configuration during first-run onboarding; allow it to be added later.
-
-If question-bank tools are unavailable, do not describe the situation as personal-data scarcity. Say the real-question runtime is not connected.
+运行时规则见 [本地运行时契约](../../references/local-runtime.md)。工具不可用时说明插件尚未启用；先指导安装包入口和新聊天启用，不能声称数据已经保存。

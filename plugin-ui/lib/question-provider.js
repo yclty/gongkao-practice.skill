@@ -1,9 +1,10 @@
 import { readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 let cache = null;
 
 const MODULE_ALIASES = {
-  言语: ["言语理解与表达"],
+  言语: ["言语理解与表达", "言语理解"],
   判断: ["判断推理"],
   数量: ["数量关系"],
   资料: ["资料分析"],
@@ -20,19 +21,16 @@ function normalizeText(value) {
 function normalizedCandidates(value) {
   const text = normalizeText(value);
   if (!text) return [];
-  return [text, ...(MODULE_ALIASES[text] ?? [])];
+  const aliases = Object.entries(MODULE_ALIASES).find(([key, values]) => key === text || values.includes(text));
+  return aliases ? [aliases[0], ...aliases[1]] : [text];
 }
 
 function semanticEqual(value, target) {
   if (!target) return true;
   const left = normalizeText(value);
+  if (!left) return false;
   const targets = normalizedCandidates(target);
-  return targets.some(
-    (candidate) =>
-      left === candidate ||
-      left.includes(candidate) ||
-      candidate.includes(left)
-  );
+  return targets.some((candidate) => left === candidate);
 }
 
 function loadRawBank(path) {
@@ -61,12 +59,23 @@ function loadRawBank(path) {
 function paperGroups(items) {
   const groups = new Map();
   for (const item of items) {
-    const paperId = item.paper_id || null;
-    if (!paperId) continue;
-    if (!groups.has(paperId)) groups.set(paperId, []);
-    groups.get(paperId).push(item);
+    const memberships = item.paper_memberships ?? (item.paper_id ? [{ paper_id: item.paper_id }] : []);
+    for (const membership of memberships) {
+      const paperId = membership.paper_id;
+      if (!paperId) continue;
+      if (!groups.has(paperId)) groups.set(paperId, []);
+      groups.get(paperId).push({ ...item, ...membership });
+    }
   }
   return groups;
+}
+
+function completePaper(questions) {
+  const total = Number(questions[0]?.paper_total);
+  if (!Number.isInteger(total) || total < 1 || questions.length !== total) return false;
+  const positions = new Set(questions.map((q) => Number(q.paper_position)));
+  return positions.size === total && new Set(questions.map((q)=>q.question_id)).size===total && questions.every((q) => q.paper_total === total && q.paper_total_verified!==false && q.interactive_supported)
+    && [...positions].every((position) => Number.isInteger(position) && position >= 1 && position <= total);
 }
 
 export function bankStats(items) {
@@ -87,7 +96,7 @@ export function bankStats(items) {
   const groups = paperGroups(items);
   let completeInteractivePapers = 0;
   for (const questions of groups.values()) {
-    if (questions.length && questions.every((item) => item.interactive_supported)) {
+    if (completePaper(questions)) {
       completeInteractivePapers += 1;
     }
   }
@@ -120,9 +129,9 @@ export function questionBankCatalog(items, options = {}) {
       year: first.year ?? null,
       province: first.province ?? null,
       exam_type: first.exam_type ?? null,
-      total_questions: sorted.length,
+      total_questions: first.paper_total ?? sorted.length,
       interactive_questions: interactiveCount,
-      complete_interactive: interactiveCount === sorted.length && sorted.length > 0,
+      complete_interactive: completePaper(sorted),
     });
   }
 
@@ -134,6 +143,10 @@ export function questionBankCatalog(items, options = {}) {
 
   return {
     stats,
+    subtype_inventory: [...items.reduce((map,item)=>{
+      if(item.interactive_supported && item.module && item.subtype) { const key=`${item.module}::${item.subtype}`;const entry=map.get(key)??{module:item.module,subtype:item.subtype,count:0};entry.count++;map.set(key,entry); }
+      return map;
+    },new Map()).values()],
     modules: Object.entries(stats.modules)
       .map(([module, count]) => ({ module, count }))
       .slice(0, limit),
@@ -195,10 +208,14 @@ function recencyRank(item) {
   return Number(item.year || 0);
 }
 
-function rankCandidates(items) {
+function rankCandidates(items, query = {}) {
   return items
     .map((item) => ({ item, random: Math.random() }))
     .sort((a, b) => {
+      const left=query.practice_history?.[a.item.question_id],right=query.practice_history?.[b.item.question_id];
+      const unseen=Number(Boolean(left?.seen))-Number(Boolean(right?.seen));if(unseen)return unseen;
+      const wrong=Number(Boolean(right?.wrong))-Number(Boolean(left?.wrong));if(wrong)return wrong;
+      const last=String(left?.last??"").localeCompare(String(right?.last??""));if(last)return last;
       const sourceDiff = sourceRank(a.item) - sourceRank(b.item);
       if (sourceDiff !== 0) return sourceDiff;
 
@@ -212,14 +229,17 @@ function rankCandidates(items) {
 
 export function toQuizQuestion(item) {
   const answer = normalizeText(item.correct_answer);
-  if (!/^[A-D]$/.test(answer)) {
-    throw new Error(
-      `Question ${item.question_id} is not compatible with single-choice UI`
-    );
+  const labels = new Set((item.options ?? []).map((option) => option.label));
+  const pattern = item.question_type === "MULTIPLE" ? /^[A-F](,[A-F])*$/ : /^[A-F]$/;
+  if (!normalizeText(item.question_id) || !pattern.test(answer) || answer.split(",").some((label) => !labels.has(label)) || labels.size!==(item.options??[]).length || [...labels].some((label)=>! /^[A-F]$/.test(label)) || !(item.stem ?? "").trim() || (item.options ?? []).length < 2 || item.options.some((option) => !option.text?.trim())) {
+    throw Object.assign(new Error(`题目 ${item.question_id??"未编号"} 的题干、选项或答案不完整`),{code:"INVALID_INPUT"});
   }
 
   return {
     question_id: item.question_id,
+    question_version: createHash("sha256").update(JSON.stringify([item.stem,item.material,item.options,item.correct_answer])).digest("hex"),
+    bank_version: item.bank_version ?? "custom",
+    question_type: item.question_type ?? "SINGLE",
     module: item.module || "综合",
     subtype: item.subtype || undefined,
     source_type: item.source_type || "practice",
@@ -237,7 +257,7 @@ export function toQuizQuestion(item) {
       : undefined,
     fastest_method: normalizeText(item.fastest_method) || undefined,
     explanation_short: normalizeText(item.explanation_short) || undefined,
-    explanation_full: normalizeText(item.analysis) || undefined,
+    explanation_full: normalizeText(item.explanation_full ?? item.analysis) || undefined,
     provenance: {
       source_provider: item.source_provider || null,
       source_exam: item.source_exam || null,
@@ -274,7 +294,7 @@ export function selectQuestions(items, query = {}) {
       common.filter(
         (item) =>
           !selectedIds.has(item.question_id) && targetMatches(item, target)
-      )
+      ), query
     );
 
     for (const item of exact.slice(0, count)) {
@@ -283,13 +303,13 @@ export function selectQuestions(items, query = {}) {
     }
 
     const missing = count - Math.min(count, exact.length);
-    if (missing > 0 && target.subtype && target.module) {
+    if (query.allow_relaxation === true && missing > 0 && target.subtype && target.module) {
       const fallback = rankCandidates(
         common.filter(
           (item) =>
             !selectedIds.has(item.question_id) &&
             semanticEqual(item.module, target.module)
-        )
+        ), query
       );
       for (const item of fallback.slice(0, missing)) {
         selected.push(item);
@@ -302,9 +322,9 @@ export function selectQuestions(items, query = {}) {
     ? Math.max(1, Math.min(50, Number(query.count)))
     : targets.reduce((sum, target) => sum + Number(target.count ?? 0), 0);
 
-  if (selected.length < requestedCount) {
+  if (query.allow_relaxation === true && selected.length < requestedCount) {
     const filler = rankCandidates(
-      common.filter((item) => !selectedIds.has(item.question_id))
+      common.filter((item) => !selectedIds.has(item.question_id)), query
     );
     for (const item of filler.slice(0, requestedCount - selected.length)) {
       selected.push(item);
@@ -327,8 +347,7 @@ export function selectPaper(items, query = {}) {
     if (!metadataMatched.length) continue;
 
     const interactive = metadataMatched.filter((item) => item.interactive_supported);
-    const complete =
-      interactive.length === metadataMatched.length && metadataMatched.length > 0;
+    const complete = completePaper(questions) && metadataMatched.length === questions.length;
 
     if (requireComplete && !complete) continue;
     if (!interactive.length) continue;
@@ -341,7 +360,7 @@ export function selectPaper(items, query = {}) {
         year: first.year ?? null,
         province: first.province ?? null,
         exam_type: first.exam_type ?? null,
-        total_questions: metadataMatched.length,
+        total_questions: first.paper_total ?? metadataMatched.length,
         interactive_questions: interactive.length,
         complete_interactive: complete,
       },

@@ -2,3 +2,6 @@
 local-data/
 dist/
 plugin-ui/.runtime/
+**/node_modules/
+**/__pycache__/
+*.gkbackup
