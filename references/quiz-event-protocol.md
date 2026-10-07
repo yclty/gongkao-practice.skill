@@ -1,3 +1,5 @@
+> 1.0.0 本地运行时以 [local-runtime.md](local-runtime.md) 为准：binding_id 绑定本地目标，作答自动事务保存，session 持久恢复，摘要不再次回写。下文保留为 0.9 历史/纯规则兼容说明。
+
 # Quiz Event Protocol v0.8
 
 ## 1. 目标

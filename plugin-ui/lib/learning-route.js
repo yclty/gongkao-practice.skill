@@ -232,6 +232,7 @@ export function buildStudyLauncher(state, input = {}, bankStatus = null, now = n
   }).length;
   const bankConfigured = bankStatus?.configured !== false;
   const bankReady = bankConfigured && (bankStatus?.stats?.interactive_supported ?? 1) > 0;
+  const paperReady = bankReady && (bankStatus?.stats?.complete_interactive_papers ?? 0) > 0;
 
   const notices = [];
   if (!bankReady) {
@@ -283,7 +284,7 @@ export function buildStudyLauncher(state, input = {}, bankStatus = null, now = n
         },
         { id: "chapter", label: "集中学一个章节", mode: "chapter" },
         { id: "set", label: "做一套 20 题", mode: "set" },
-        { id: "paper", label: "做一套真题试卷", mode: "paper", enabled: bankReady },
+        { id: "paper", label: "做一套真题试卷", mode: "paper", enabled: paperReady },
         { id: "quick", label: "只想随手刷几题", mode: "quick" },
       ],
       due_review_count: dueCount,
